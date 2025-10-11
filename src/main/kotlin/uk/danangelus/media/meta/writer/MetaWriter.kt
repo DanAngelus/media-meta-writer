@@ -84,10 +84,20 @@ class MetaWriter(
         try {
             nfoFile.printWriter().use { writer ->
                 writer.println("<movie>")
-                writer.println("\t<title>${metadata.title}</title>")
-                writer.println("\t<year>${metadata.year}</year>")
-                writer.println("\t<rating>${metadata.rating}</rating>")
-                writer.println("\t<tmdbId>${metadata.tmdbId}</tmdbId>")
+                writer.append("<createdby>MediaMetaWriter by DanAngelus</createdby>")
+                metadata.title?.let { writer.append("<title>$it</title>") }
+                metadata.title?.let { writer.append("<originaltitle>$it</originaltitle>") }
+                metadata.plot?.let { writer.append("<plot>$it</plot>") }
+                metadata.outline?.let { writer.append("<outline>$it</outline>") }
+                metadata.length?.let { writer.append("<runtime>$it</runtime>") }
+                metadata.year?.let { writer.append("<year>$it</year>") }
+                metadata.releaseDate?.let { writer.append("<fulldate>$it</fulldate>") }
+                metadata.rating?.let { writer.append("<rating>$it</rating>") }
+                metadata.studio?.let { writer.append("<studio>$it</studio>") }
+                metadata.director?.let { writer.append("<director>$it</director>") }
+                metadata.genre?.let { writer.append("<genre>$it</genre>") }
+                metadata.actors?.forEach { writer.append("<actor><name>$it</name></actor>") }
+                metadata.tmdbId?.let { writer.append("<uniqueid type=\"tmdb\" default=\"true\">$it</uniqueid>") }
                 writer.println("</movie>")
             }
             log.info("Successfully wrote NFO file: ${nfoFile.absolutePath}")
