@@ -3,11 +3,13 @@ spring:
     name: media-meta-writer
 
 media:
-  source-directory: C:/Users/me/Media/_drop/Films
-  target-directory:
-    files: C:/Users/me/Media/Library/Films
-#    series: C:/Users/me/Media/Series
-#    music: C:/Users/me/Media/Music
+  media:
+    - type: FILM
+      source-directory: C:/Users/me/Media/_drop
+      destination-directory: C:/Users/me/Media/Films
+#    - type: SERIES
+#      source-directory: C:/Users/me/Media/_drop/Series
+#      destination-directory: C:/Users/me/Media/Library/Series
 
 tmdb:
   api:

@@ -5,8 +5,9 @@ package uk.danangelus.media.meta.model
  *
  * @author Dan Bennett
  */
-data class MediaMetadata(
+class MediaMetadata(
     var title: String? = null,
+    var originalTitle: String? = null,
     var year: String? = null,
     var outline: String? = null,
     var plot: String? = null,
@@ -22,8 +23,22 @@ data class MediaMetadata(
     var series: String? = null,
     var seriesNumber: String? = null,
     var episodeNumber: String? = null,
-    var poster: ByteArray? = null, // ToDo :: Separate this and store image next to movie.
+    var poster: ByteArray? = null,
+    var logo: ByteArray? = null,
+    var backdrop: ByteArray? = null,
     var imdbId: String? = null,
     var tmdbId: String? = null,
     var tvdbId: String? = null,
-)
+) {
+
+    override fun toString(): String {
+        return "$title ($year)"
+    }
+}
+
+enum class MediaType {
+    FILM,
+    SERIES,
+    MUSIC,
+    BOOK
+}
