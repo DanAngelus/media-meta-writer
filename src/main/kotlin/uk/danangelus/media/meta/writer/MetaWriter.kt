@@ -10,7 +10,6 @@ import uk.danangelus.media.meta.model.MediaCfg.Media
 import uk.danangelus.media.meta.model.MediaMetadata
 import uk.danangelus.media.meta.model.MediaType
 import uk.danangelus.media.meta.monitor.DirectoryMonitor
-import uk.danangelus.media.meta.services.TMDBService
 import java.io.File
 import java.io.FileOutputStream
 
@@ -20,17 +19,17 @@ import java.io.FileOutputStream
  * @author Dan Bennett
  */
 @Service
-class MetaWriter(
-    private val tmdbService: TMDBService,
-) {
+class MetaWriter {
 
     fun writeData(media: Media, file: File, metadata: MediaMetadata): Boolean {
         log.debug("Starting to process metadata for file: ${file.absolutePath}")
 
         return try {
             // Write metadata into MP4 file
-            if (file.extension == "mp4") {
+            if (SUPPORTED_MP4_FORMATS.contains(file.extension)) {
                 writeMp4Metadata(file, metadata)
+            } else if (SUPPORTED_MKV_FORMATS.contains(file.extension)) {
+                writeMkvMetadata(file, metadata)
             } else {
                 log.warn("Unsupported file extension: ${file.extension}. Skipping metadata writing for ${file.name}")
             }
@@ -77,6 +76,20 @@ class MetaWriter(
         }
     }
 
+    private fun writeMkvMetadata(file: File, metadata: MediaMetadata) {
+        try {
+            // Check if the file exists
+            if (!file.exists()) {
+                log.warn("File does not exist: ${file.absolutePath}")
+                return
+            }
+
+            log.info("MKV NOT SUPPORTED: ${file.name}")
+        } catch (ex: Exception) {
+            log.error("Error while writing metadata to MKV file: ${file.absolutePath}", ex)
+        }
+    }
+
     fun writeNfoFile(media: Media, file: File, metadata: MediaMetadata) {
         val nfoFile = File(file.parentFile, "${file.nameWithoutExtension}.nfo")
         try {
@@ -100,7 +113,13 @@ class MetaWriter(
                     metadata.studio?.let { writer.println("  <studio>$it</studio>") }
                     metadata.director?.let { writer.println("  <director>$it</director>") }
                     metadata.genre?.let { writer.println("  <genre>$it</genre>") }
-                    metadata.actors?.forEach { writer.println("  <actor>    <name>$it</name></actor>") }
+                    metadata.actors?.forEach {
+                        writer.println("  <actor>")
+                        writer.println("      <name>${it.actor}</name>")
+                        writer.println("      <role>${it.character}</role>")
+                        writer.println("      <order>${it.order}</order>")
+                        writer.println("  </actor>")
+                    }
                     metadata.tmdbId?.let { writer.println("  <uniqueid type=\"tmdb\" default=\"true\">$it</uniqueid>") }
 
                     if (metadata.poster != null ||
@@ -137,6 +156,8 @@ class MetaWriter(
     }
 
     companion object {
+        private val SUPPORTED_MP4_FORMATS = listOf("mp4", "m4v")
+        private val SUPPORTED_MKV_FORMATS = listOf("mkv")
         private val log = LoggerFactory.getLogger(DirectoryMonitor::class.java)
     }
 }

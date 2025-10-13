@@ -2,6 +2,8 @@ spring:
   application:
     name: media-meta-writer
 
+server:
+  port: 8666
 media:
   media:
     - type: FILM

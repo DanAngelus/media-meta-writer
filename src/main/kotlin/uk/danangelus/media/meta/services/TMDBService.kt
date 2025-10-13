@@ -10,7 +10,9 @@ import org.springframework.util.LinkedMultiValueMap
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.exchange
 import org.springframework.web.util.UriComponentsBuilder
+import uk.danangelus.media.meta.model.Actor
 import uk.danangelus.media.meta.model.MediaMetadata
+import uk.danangelus.media.meta.services.model.CastListResponse
 import uk.danangelus.media.meta.services.model.ConfigurationResponse
 import uk.danangelus.media.meta.services.model.GenreListResponse
 import uk.danangelus.media.meta.services.model.MovieSearchResponse
@@ -29,7 +31,8 @@ class TMDBService(
 ) {
 
     private var configuration: ConfigurationResponse? = null
-    private var genres: MutableMap<Int, String> = mutableMapOf()
+    private var filmGenres: MutableMap<Int, String> = mutableMapOf()
+    private var seriesGenres: MutableMap<Int, String> = mutableMapOf()
 
     @PostConstruct
     fun init() {
@@ -48,13 +51,21 @@ class TMDBService(
     }
 
     private fun loadGenres() {
-        val request = RequestEntity<Void>(
+        var request = RequestEntity<Void>(
             LinkedMultiValueMap(mapOf("Authorization" to listOf("Bearer $accessToken"))),
             HttpMethod.GET,
             UriComponentsBuilder.fromUriString("https://api.themoviedb.org/3/genre/movie/list").build(null),
         )
         restTemplate.exchange<GenreListResponse>(request).body?.genres
-            ?.forEach { genres[it.id!!] = it.name!! }
+            ?.forEach { filmGenres[it.id!!] = it.name!! }
+
+        request = RequestEntity<Void>(
+            LinkedMultiValueMap(mapOf("Authorization" to listOf("Bearer $accessToken"))),
+            HttpMethod.GET,
+            UriComponentsBuilder.fromUriString("https://api.themoviedb.org/3/genre/tv/list").build(null),
+        )
+        restTemplate.exchange<GenreListResponse>(request).body?.genres
+            ?.forEach { filmGenres[it.id!!] = it.name!! }
     }
 
     fun findMovie(metadata: MediaMetadata) {
@@ -82,22 +93,32 @@ class TMDBService(
                 metadata.title = movieData.title
                 metadata.originalTitle = movieData.originalTitle
                 metadata.rating = movieData.voteAverage?.toString()
+                metadata.releaseDate = movieData.releaseDate ?: "Unknown"
                 metadata.year = "${movieData.releaseDate?.take(4)?.toInt()}"
                 metadata.length = metadata.length ?: "${movieData.runtime ?: "Unknown"}"
                 metadata.outline = movieData.tagline
                 metadata.plot = movieData.overview
 
-                movieData.genreIds
-                    ?.filter { genres.keys.contains(it) }
+                metadata.genre = movieData.genreIds
+                    ?.filter { filmGenres.keys.contains(it) }
                     ?.map {
-                        metadata.genre += genres[it]
+                        filmGenres[it]
                     }
+                    ?.filter { it.isNullOrBlank().not() }
                     ?.joinToString(",")
 
-                // ToDo :: Grab more data!
+                val credits = getCast(metadata.tmdbId!!)
+                if (credits != null) {
+                    metadata.director = credits.crew?.filter { "Director".equals(it.job, true) }
+                        ?.map { it.name }
+                        ?.firstOrNull()
 
-//                getImages(metadata)
+                    val producers = credits.crew?.filter { "Producer".equals(it.job, true) }
+                    metadata.producers = producers?.filter { it.name.isNullOrBlank().not() }?.map { it.name!! }
 
+                    val actors = credits.cast?.filter { it.name.isNullOrBlank().not() && it.order != null }
+                    metadata.actors = actors?.filter { it.name.isNullOrBlank().not() }?.map { Actor(it.name!!, it.character, it.order) }
+                }
                 metadata.backdrop = retrieveImage(movieData.backdropPath)
                 metadata.logo = retrieveImage(movieData.logoPath)
                 metadata.poster = retrieveImage(movieData.posterPath)
@@ -111,8 +132,30 @@ class TMDBService(
         }
     }
 
+    private fun getCast(movieId: String): CastListResponse? {
+        return try {
+
+            val castRequest = RequestEntity<Void>(
+                LinkedMultiValueMap(
+                    mapOf(
+                        "Authorization" to listOf("Bearer $accessToken"),
+                    )
+                ),
+                HttpMethod.GET,
+                UriComponentsBuilder.fromUriString("https://api.themoviedb.org/3/movie/{movie_id}/credits")
+                    .build(mapOf("movie_id" to movieId)),
+            )
+            restTemplate.exchange<CastListResponse>(castRequest).body
+        } catch (ex: Exception) {
+            log.error("Error while fetching cast from TMDb", ex)
+            null
+        }
+    }
+
     private fun retrieveImage(image: String?): ByteArray? {
         return try {
+            if (image == null) return null
+
             val imageRequest = RequestEntity<Void>(
                 LinkedMultiValueMap(
                     mapOf(

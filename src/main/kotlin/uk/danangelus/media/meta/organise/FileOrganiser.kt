@@ -7,6 +7,7 @@ import uk.danangelus.media.meta.model.MediaMetadata
 import uk.danangelus.media.meta.model.MediaType.FILM
 import java.io.File
 import java.nio.file.Files
+import kotlin.io.path.name
 
 /**
  * Moves files to organised folders once metadata has been applied.
@@ -25,7 +26,7 @@ class FileOrganiser {
         }
 
         val name = if (metadata.title.isNullOrBlank().not()) {
-            "${metadata.title} (${metadata.year})" // ToDo :: add resolution X
+            "${clean(metadata.title)} (${metadata.year})" // ToDo :: add resolution X
         } else {
             file.nameWithoutExtension
         }
@@ -36,11 +37,23 @@ class FileOrganiser {
             val newFile = File(dest, "${name}.${file.extension}")
             Files.move(file.toPath(), newFile.toPath())
             log.debug("File moved successfully: ${file.absolutePath} to: ${dest.absolutePath}")
+
+            Files.list(file.parentFile.toPath())
+                .filter { it.fileName.toString().startsWith("${file.nameWithoutExtension}.") }
+                .forEach {
+                    val dest = File(dest, it.name)
+                    Files.move(it, dest.toPath())
+                    log.debug("File moved successfully: ${it.toFile().absolutePath} to: ${dest.absolutePath}")
+                }
             newFile
         } else {
             log.warn("Failed to create directory: ${dest.absolutePath}")
             null
         }
+    }
+
+    private fun clean(title: String?): String {
+        return title?.replace(Regex("[^(!?a-zA-Z0-9.\\- )]"), "")?.trim() ?: ""
     }
 
     companion object {

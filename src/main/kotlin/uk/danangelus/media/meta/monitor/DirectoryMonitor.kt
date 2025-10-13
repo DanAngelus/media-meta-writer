@@ -99,7 +99,7 @@ class DirectoryMonitor(
             log.debug("Processing all files in directory: ${directory.absolutePath}")
 
             directory.listFiles()?.forEach { file ->
-                if (file.isFile) {
+                if (file.isFile && SUPPORTED_VIDEO_FORMATS.contains(file.extension)) {
                     log.debug("Processing file: ${file.absolutePath}")
                     mediaManager.registerMedia(media, file)
                 }
@@ -118,6 +118,7 @@ class DirectoryMonitor(
     }
 
     companion object {
+        private val SUPPORTED_VIDEO_FORMATS = listOf("mp4", "m4v", "mkv", "mov", "avi", "wmv", "mpeg", "mpg")
         private val log = LoggerFactory.getLogger(DirectoryMonitor::class.java)
     }
 }

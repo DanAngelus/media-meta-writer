@@ -18,8 +18,8 @@ class MediaMetadata(
     var director: String? = null,
     var genre: String? = null,
     var studio: String? = null,
-    var producers: String? = null,
-    var actors: String? = null,
+    var producers: List<String>? = null,
+    var actors: List<Actor>? = null,
     var series: String? = null,
     var seriesNumber: String? = null,
     var episodeNumber: String? = null,
@@ -35,6 +35,12 @@ class MediaMetadata(
         return "$title ($year)"
     }
 }
+
+class Actor(
+    val actor: String? = null,
+    val character: String? = null,
+    val order: Int? = null,
+)
 
 enum class MediaType {
     FILM,
