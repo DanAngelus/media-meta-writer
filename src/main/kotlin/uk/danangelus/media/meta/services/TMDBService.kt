@@ -10,6 +10,7 @@ import org.springframework.util.LinkedMultiValueMap
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.exchange
 import org.springframework.web.util.UriComponentsBuilder
+import uk.danangelus.media.meta.error.NoMatchException
 import uk.danangelus.media.meta.model.Actor
 import uk.danangelus.media.meta.model.MediaMetadata
 import uk.danangelus.media.meta.services.model.CastListResponse
@@ -126,7 +127,10 @@ class TMDBService(
                 log.info("TMDb metadata found: $metadata")
             } else {
                 log.warn("No results found on TMDb for title: ${metadata.title}")
+                throw NoMatchException("No results found on TMDb for title: ${metadata.title}")
             }
+        } catch (ex: NoMatchException) {
+            throw ex
         } catch (ex: Exception) {
             log.error("Error while fetching metadata from TMDb for title: ${metadata.title}", ex)
         }

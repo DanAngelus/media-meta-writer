@@ -16,7 +16,9 @@ class MediaCfg(
 
     class Media(
         val type: MediaType,
-        val sourceDirectory: String,
+        val errorDirectory: String,
+        val nomatchDirectory: String,
         val destinationDirectory: String,
+        val sourceDirectory: String,
     )
 }

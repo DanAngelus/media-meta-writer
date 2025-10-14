@@ -7,8 +7,10 @@ server:
 media:
   media:
     - type: FILM
-      source-directory: C:/Users/me/Media/_drop
+      error-directory: C:/Users/me/Media/_error
+      nomatch-directory: C:/Users/me/Media/_nomatch
       destination-directory: \\ZionMedia\media\Library\Films
+      source-directory: C:/Users/me/Media/_drop
 #    - type: SERIES
 #      source-directory: C:/Users/me/Media/_drop/Series
 #      destination-directory: C:/Users/me/Media/Library/Series

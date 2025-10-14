@@ -3,6 +3,7 @@ package uk.danangelus.media.meta.manager
 import org.mp4parser.tools.Path
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import uk.danangelus.media.meta.error.NoMatchException
 import uk.danangelus.media.meta.model.MediaCfg.Media
 import uk.danangelus.media.meta.organise.FileOrganiser
 import uk.danangelus.media.meta.reader.MediaReader
@@ -34,8 +35,17 @@ class MediaManager(
             }
             log.info("Retrieving updated information from TMDB for: {}", metadata.title)
 
-            tmdbService.findMovie(metadata)
-            log.info("Retrieved! {}", metadata)
+            try {
+                tmdbService.findMovie(metadata)
+                log.info("Retrieved! {}", metadata)
+            } catch (_: NoMatchException) {
+                mediaOrganiser.moveToNoMatch(media, file)
+                return
+            } catch (_: Exception) {
+                log.warn("Error for: {}", metadata.title)
+                mediaOrganiser.moveToError(media, file)
+                return
+            }
 
             log.info("Writing updated data to: {}", file.absolutePath)
             if (metaWriter.writeData(media, file, metadata)) {
@@ -65,6 +75,7 @@ class MediaManager(
             }
         } catch (ex: Exception) {
             log.error("Error while processing file: ${file.absolutePath}", ex)
+            mediaOrganiser.moveToError(media, file)
         }
     }
 

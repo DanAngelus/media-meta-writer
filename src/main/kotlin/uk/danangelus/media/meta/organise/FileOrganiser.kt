@@ -49,6 +49,15 @@ class FileOrganiser {
         }
     }
 
+    fun moveToNoMatch(mediaCfg: MediaCfg.Media, file: File) {
+        Files.move(file.toPath(), File(mediaCfg.nomatchDirectory, file.name).toPath())
+    }
+
+    fun moveToError(mediaCfg: MediaCfg.Media, file: File) {
+        Files.move(file.toPath(), File(mediaCfg.errorDirectory, file.name).toPath())
+
+    }
+
     companion object {
         private val log = LoggerFactory.getLogger(FileOrganiser::class.java)
     }
