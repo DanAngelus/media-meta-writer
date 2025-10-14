@@ -10,6 +10,8 @@ import uk.danangelus.media.meta.model.MediaCfg.Media
 import java.io.File
 import java.nio.file.*
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.io.path.extension
 import kotlin.io.path.isDirectory
 
 /**
@@ -26,18 +28,44 @@ class DirectoryMonitor(
 
     private val executorService = Executors.newSingleThreadExecutor()
     private val dirToMedia = mutableMapOf<String, Media>()
+    private val processing: AtomicBoolean = AtomicBoolean(false)
 
     @PostConstruct
     fun init() {
         mediaCfg.media.forEach { media ->
             dirToMedia[File(media.sourceDirectory).absolutePath] = media
         }
+
+//        fixNfoFiles("\\\\ZionMedia\\media\\Library\\Films")
+    }
+
+    private fun fixNfoFiles(directory: String) {
+        val filmsDir = File(directory)
+        if (!filmsDir.isDirectory) {
+            return
+        }
+
+        Files.walk(filmsDir.toPath()).forEach {
+            if (it.isDirectory()) {
+                return@forEach
+            }
+            if (it.extension.equals("nfo", true)) {
+                val content = it.toFile().readText()
+                    .replace("<logo>backdrop.png</logo>", "<backdrop>backdrop.jpg</backdrop>")
+                    .replace("<backdrop>backdrop.png</backdrop>", "<backdrop>backdrop.jpg</backdrop>")
+                    .replace("<logo>poster.png</logo>", "<poster>poster.jpg</poster>")
+                    .replace("<poster>poster.png</poster>", "<poster>poster.jpg</poster>")
+                    .replace("&", "&amp;")
+                log.info("Fixed NFO file: ${it.toFile().absolutePath}:\n$content")
+                Files.write(it, content.toByteArray())
+            }
+        }
     }
 
     /**
      * Monitors directories from the configuration and processes new files.
      */
-    @Scheduled(initialDelay = 2000)
+    @Scheduled(initialDelay = 3000, fixedDelay = Long.MAX_VALUE)
     fun monitor() {
         // Ensure configuration is valid
         if (mediaCfg.media.isEmpty()) {
@@ -95,18 +123,40 @@ class DirectoryMonitor(
      * Processes all files in the given directory when a new file is detected.
      */
     private fun processAllFilesInDirectory(media: Media, directory: File) {
+        if (processing.get()) {
+            return
+        }
+        processing.set(true)
         if (directory.exists() && directory.isDirectory) {
             log.debug("Processing all files in directory: ${directory.absolutePath}")
 
-            directory.listFiles()?.forEach { file ->
-                if (file.isFile && SUPPORTED_VIDEO_FORMATS.contains(file.extension)) {
+            val allFiles = directory.listFiles()
+                ?.filter { file -> file.isFile && SUPPORTED_VIDEO_FORMATS.contains(file.extension) }
+
+            if (allFiles.isNullOrEmpty()) {
+                return
+            }
+
+            val files = if (allFiles.size < MAX_THRESHOLD) {
+                allFiles
+            } else {
+                allFiles.subList(0, MAX_THRESHOLD - 1)
+            }
+
+            // Process one batch at a time
+            files.parallelStream()
+                .forEach { file ->
                     log.debug("Processing file: ${file.absolutePath}")
                     mediaManager.registerMedia(media, file)
                 }
-            }
+
+            // Keep checking for new files
+            processing.set(false)
+            processAllFilesInDirectory(media, directory)
         } else {
             log.warn("Path is not a valid directory: ${directory.absolutePath}")
         }
+        processing.set(false)
     }
 
     /**
@@ -118,6 +168,7 @@ class DirectoryMonitor(
     }
 
     companion object {
+        private val MAX_THRESHOLD = 20
         private val SUPPORTED_VIDEO_FORMATS = listOf("mp4", "m4v", "mkv", "mov", "avi", "wmv", "mpeg", "mpg")
         private val log = LoggerFactory.getLogger(DirectoryMonitor::class.java)
     }

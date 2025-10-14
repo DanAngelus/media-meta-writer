@@ -54,7 +54,7 @@ class MediaReader() {
 
         // Read relevant metadata
         val metadata = MediaMetadata(
-            title = metadataHandle.get("dc:title") ?: getTitle(file.nameWithoutExtension),
+            title = getTitle(file.nameWithoutExtension) ?: metadataHandle.get("dc:title"),
             plot = metadataHandle.get("dc:description"),
             rating = metadataHandle.get("xmp:Rating") ?: "Unknown",
             length = metadataHandle.get("xmpDM:duration")?.toDoubleOrNull()?.let { "${Math.ceil(it / 60).toInt()} minutes" },
@@ -64,18 +64,18 @@ class MediaReader() {
                         ?.let { height -> "${width}x${height}" }
                 } ?: "Unknown",
             releaseDate = metadataHandle["xmpDM:releaseDate"] ?: "Unknown",
-            year = metadataHandle["xmpDM:releaseDate"]?.take(4) ?: getYear(file.nameWithoutExtension),
+            year = getYear(file.nameWithoutExtension) ?: metadataHandle["xmpDM:releaseDate"]?.take(4),
         )
         log.info("Extracted metadata from file: {}\n{}", file.absolutePath, metadata)
         return metadata
     }
 
-    fun getTitle(fileName: String): String {
-        return fileName.split("(").first().trim()
+    fun getTitle(fileName: String): String? {
+        return fileName.split("(").first().trim().ifBlank { null }
     }
 
-    fun getYear(fileName: String): String {
-        return fileName.substringAfter("(").substringBefore(")").trim()
+    fun getYear(fileName: String): String? {
+        return fileName.substringAfter("(").substringBefore(")").trim().ifBlank { null }
     }
 
     companion object {

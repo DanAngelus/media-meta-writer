@@ -31,6 +31,12 @@ class MediaMetadata(
     var tvdbId: String? = null,
 ) {
 
+    fun filename(): String = "${title
+        ?.replace("&", "and")
+        ?.replace(": ", " - ")
+        ?.replace(Regex("[^\\p{L}\\p{N}.\\- ]"), "")
+        ?.trim()} ($year)"
+
     override fun toString(): String {
         return "$title ($year)"
     }

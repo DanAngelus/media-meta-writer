@@ -8,7 +8,7 @@ media:
   media:
     - type: FILM
       source-directory: C:/Users/me/Media/_drop
-      destination-directory: C:/Users/me/Media/Films
+      destination-directory: \\ZionMedia\media\Library\Films
 #    - type: SERIES
 #      source-directory: C:/Users/me/Media/_drop/Series
 #      destination-directory: C:/Users/me/Media/Library/Series
@@ -18,3 +18,9 @@ tmdb:
     url: https://api.themoviedb.org/3/search/movie
     key: 917f977a9db51cbf3676f8d9014b649c
     access-token: eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI5MTdmOTc3YTlkYjUxY2JmMzY3NmY4ZDkwMTRiNjQ5YyIsIm5iZiI6MTc2MDE4MzQwMC42MSwic3ViIjoiNjhlYTQ0Njg5N2U3ZGFmZTNiMWY2MjJmIiwic2NvcGVzIjpbImFwaV9yZWFkIl0sInZlcnNpb24iOjF9.ZUeezA3C6AZn47tKOKPi8mguE8KRA8OmPbglfaqbl-s
+
+
+logging:
+  pattern:
+    console: '%msg%n'
+    file: '%msg%n'

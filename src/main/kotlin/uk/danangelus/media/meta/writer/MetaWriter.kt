@@ -91,7 +91,7 @@ class MetaWriter {
     }
 
     fun writeNfoFile(media: Media, file: File, metadata: MediaMetadata) {
-        val nfoFile = File(file.parentFile, "${file.nameWithoutExtension}.nfo")
+        val nfoFile = File(file.parentFile, "${metadata.filename()}.nfo")
         try {
             if (nfoFile.exists()) {
                 log.warn("NFO file already exists for file: ${file.name}. Skipping writing.")
@@ -126,9 +126,9 @@ class MetaWriter {
                             metadata.logo != null ||
                             metadata.backdrop != null) {
                         writer.println("  <art>")
-                        if (metadata.backdrop != null) writer.println("    <logo>backdrop.png</logo>")
+                        if (metadata.backdrop != null) writer.println("    <backdrop>backdrop.png</backdrop>")
                         if (metadata.logo != null) writer.println("    <logo>logo.png</logo>")
-                        if (metadata.poster != null) writer.println("    <logo>poster.png</logo>")
+                        if (metadata.poster != null) writer.println("    <poster>poster.png</poster>")
                         writer.println("  </art>")
                     }
 

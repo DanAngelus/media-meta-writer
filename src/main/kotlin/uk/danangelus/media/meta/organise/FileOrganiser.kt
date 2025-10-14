@@ -7,6 +7,7 @@ import uk.danangelus.media.meta.model.MediaMetadata
 import uk.danangelus.media.meta.model.MediaType.FILM
 import java.io.File
 import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import kotlin.io.path.name
 
 /**
@@ -25,23 +26,19 @@ class FileOrganiser {
             return null
         }
 
-        val name = if (metadata.title.isNullOrBlank().not()) {
-            "${clean(metadata.title)} (${metadata.year})" // ToDo :: add resolution X
-        } else {
-            file.nameWithoutExtension
-        }
+        val name = metadata.filename()
 
         val dest = File(media.destinationDirectory, name)
         return if (dest.exists() || dest.mkdirs()) {
             log.debug("Moving file: ${file.absolutePath} to: ${dest.absolutePath}")
             val newFile = File(dest, "${name}.${file.extension}")
-            Files.move(file.toPath(), newFile.toPath())
+            Files.move(file.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
             log.debug("File moved successfully: ${file.absolutePath} to: ${dest.absolutePath}")
 
             Files.list(file.parentFile.toPath())
                 .filter { it.fileName.toString().startsWith("${file.nameWithoutExtension}.") }
                 .forEach {
-                    val dest = File(dest, it.name)
+                    val dest = File(dest, it.name.replace(file.nameWithoutExtension, name))
                     Files.move(it, dest.toPath())
                     log.debug("File moved successfully: ${it.toFile().absolutePath} to: ${dest.absolutePath}")
                 }
@@ -50,10 +47,6 @@ class FileOrganiser {
             log.warn("Failed to create directory: ${dest.absolutePath}")
             null
         }
-    }
-
-    private fun clean(title: String?): String {
-        return title?.replace(Regex("[^(!?a-zA-Z0-9.\\- )]"), "")?.trim() ?: ""
     }
 
     companion object {
