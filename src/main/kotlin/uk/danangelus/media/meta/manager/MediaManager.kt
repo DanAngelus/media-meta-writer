@@ -33,45 +33,47 @@ class MediaManager(
                 log.warn("Skipping file: ${file.absolutePath} as title is no metadata can be found.")
                 return
             }
-            log.info("Retrieving updated information from TMDB for: {}", metadata.title)
+            log.info("[{}] Retrieving updated information from TMDB", metadata)
 
             try {
                 tmdbService.findMovie(metadata)
-                log.info("Retrieved! {}", metadata)
+                log.info("[{}] Retrieved data from TMDB", metadata)
             } catch (_: NoMatchException) {
                 mediaOrganiser.moveToNoMatch(media, file)
                 return
             } catch (_: Exception) {
-                log.warn("Error for: {}", metadata.title)
+                log.warn("Error for: {}", metadata)
                 mediaOrganiser.moveToError(media, file)
                 return
             }
 
-            log.info("Writing updated data to: {}", file.absolutePath)
+            log.info("[{}] Writing updated data to: {}", file.absolutePath)
             if (metaWriter.writeData(media, file, metadata)) {
-                log.info("Moving file: {} to new location: {}", file.absolutePath, media.destinationDirectory)
+                log.info("[{}] Moving file: {} to new location: {}", metadata, file.absolutePath, media.destinationDirectory)
                 val newLocation = mediaOrganiser.organise(media, metadata, file)
                 if (newLocation != null) {
+                    log.info("[{}] Video file moved to new location: {}", metadata, newLocation.absolutePath)
                     metaWriter.writeNfoFile(media, newLocation, metadata)
 
                     if (metadata.backdrop != null) {
                         val backdropPath = File(newLocation.parentFile, "backdrop.jpg").absolutePath
                         Files.write(Paths.get(backdropPath), metadata.backdrop!!)
-                        log.info("Wrote backdrop to: {}", backdropPath)
+                        log.info("[{}] Wrote backdrop to: {}", metadata, backdropPath)
                     }
 
                     if (metadata.logo != null) {
                         val logoPath = File(newLocation.parentFile, "logo.jpg").absolutePath
                         Files.write(Paths.get(logoPath), metadata.logo!!)
-                        log.info("Wrote logo to: {}", logoPath)
+                        log.info("[{}] Wrote logo to: {}", metadata, logoPath)
                     }
 
                     if (metadata.poster != null) {
                         val posterPath = File(newLocation.parentFile, "poster.jpg").absolutePath
                         Files.write(Paths.get(posterPath), metadata.poster!!)
-                        log.info("Wrote poster to: {}", posterPath)
+                        log.info("[{}] Wrote poster to: {}", metadata, posterPath)
                     }
                 }
+                log.info("**** [{}] FINISHED!", metadata)
             }
         } catch (ex: Exception) {
             log.error("Error while processing file: ${file.absolutePath}", ex)

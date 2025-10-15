@@ -66,7 +66,7 @@ class TMDBService(
             UriComponentsBuilder.fromUriString("https://api.themoviedb.org/3/genre/tv/list").build(null),
         )
         restTemplate.exchange<GenreListResponse>(request).body?.genres
-            ?.forEach { filmGenres[it.id!!] = it.name!! }
+            ?.forEach { seriesGenres[it.id!!] = it.name!! }
     }
 
     fun findMovie(metadata: MediaMetadata) {
@@ -77,7 +77,7 @@ class TMDBService(
             .queryParam("year", metadata.year)
             .build(null)
 
-        log.info("Searching TMDb for title: ${metadata.title}, year: ${metadata.year ?: "Unknown"}")
+        log.info("[{}] Searching TMDb for title", metadata)
 
         try {
             val request = RequestEntity<Void>(
@@ -124,9 +124,9 @@ class TMDBService(
                 metadata.logo = retrieveImage(movieData.logoPath)
                 metadata.poster = retrieveImage(movieData.posterPath)
 
-                log.info("TMDb metadata found: $metadata")
+                log.info("[{}] TMDb metadata found", metadata)
             } else {
-                log.warn("No results found on TMDb for title: ${metadata.title}")
+                log.warn("[{}] No results found on TMDb for title", metadata)
                 throw NoMatchException("No results found on TMDb for title: ${metadata.title}")
             }
         } catch (ex: NoMatchException) {

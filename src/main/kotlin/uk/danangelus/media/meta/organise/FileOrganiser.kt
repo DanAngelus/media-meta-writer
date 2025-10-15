@@ -19,10 +19,10 @@ import kotlin.io.path.name
 class FileOrganiser {
 
     fun organise(media: MediaCfg.Media, metadata: MediaMetadata, file: File): File? {
-        log.debug("Organising file: {}", file.absolutePath)
+        log.debug("[{}] Organising file: {}", metadata, file.absolutePath)
 
         if (media.type != FILM) {
-            log.warn("Unsupported file type: $media. Skipping file: ${file.absolutePath}")
+            log.warn("[{}] Unsupported file type: $media. Skipping file: ${file.absolutePath}", metadata)
             return null
         }
 
@@ -30,21 +30,25 @@ class FileOrganiser {
 
         val dest = File(media.destinationDirectory, name)
         return if (dest.exists() || dest.mkdirs()) {
-            log.debug("Moving file: ${file.absolutePath} to: ${dest.absolutePath}")
+            log.debug("[{}] Moving file: ${file.absolutePath} to: ${dest.absolutePath}", metadata)
             val newFile = File(dest, "${name}.${file.extension}")
             Files.move(file.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
-            log.debug("File moved successfully: ${file.absolutePath} to: ${dest.absolutePath}")
+            log.debug("[{}] File moved successfully: ${file.absolutePath} to: ${dest.absolutePath}", metadata)
 
             Files.list(file.parentFile.toPath())
                 .filter { it.fileName.toString().startsWith("${file.nameWithoutExtension}.") }
                 .forEach {
-                    val dest = File(dest, it.name.replace(file.nameWithoutExtension, name))
-                    Files.move(it, dest.toPath())
-                    log.debug("File moved successfully: ${it.toFile().absolutePath} to: ${dest.absolutePath}")
+                    try {
+                        val dest = File(dest, it.name.replace(file.nameWithoutExtension, name))
+                        Files.move(it, dest.toPath())
+                        log.debug("[{}] File moved successfully: ${it.toFile().absolutePath} to: ${dest.absolutePath}", metadata)
+                    } catch (ex: Exception) {
+                        log.error("[{}] Failed to move file: ${it.toFile().absolutePath}", metadata, ex)
+                    }
                 }
             newFile
         } else {
-            log.warn("Failed to create directory: ${dest.absolutePath}")
+            log.warn("[{}] Failed to create directory: ${dest.absolutePath}", metadata)
             null
         }
     }

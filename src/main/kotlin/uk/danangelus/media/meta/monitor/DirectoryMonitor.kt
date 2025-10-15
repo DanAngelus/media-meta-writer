@@ -150,12 +150,14 @@ class DirectoryMonitor(
                     mediaManager.registerMedia(media, file)
                 }
 
+            log.info("Finished batch: {} from: {}", files.size, directory.absolutePath)
             // Keep checking for new files
             processing.set(false)
             processAllFilesInDirectory(media, directory)
         } else {
             log.warn("Path is not a valid directory: ${directory.absolutePath}")
         }
+        log.info("***** FINISHED processing available files *****")
         processing.set(false)
     }
 

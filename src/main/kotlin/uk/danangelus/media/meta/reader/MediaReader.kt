@@ -66,7 +66,7 @@ class MediaReader() {
             releaseDate = metadataHandle["xmpDM:releaseDate"] ?: "Unknown",
             year = getYear(file.nameWithoutExtension) ?: metadataHandle["xmpDM:releaseDate"]?.take(4),
         )
-        log.info("Extracted metadata from file: {}\n{}", file.absolutePath, metadata)
+        log.info("[{}] Extracted metadata from file: {}\n{}", metadata, file.absolutePath, metadata)
         return metadata
     }
 

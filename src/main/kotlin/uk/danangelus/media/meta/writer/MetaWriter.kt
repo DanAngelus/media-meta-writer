@@ -31,7 +31,7 @@ class MetaWriter {
             } else if (SUPPORTED_MKV_FORMATS.contains(file.extension)) {
                 writeMkvMetadata(file, metadata)
             } else {
-                log.warn("Unsupported file extension: ${file.extension}. Skipping metadata writing for ${file.name}")
+                log.warn("[{}] Unsupported file extension: ${file.extension}. Skipping metadata writing for ${file.name}", metadata)
             }
             true
 
@@ -69,7 +69,7 @@ class MetaWriter {
             outputStream.close()
             isoFile.close()
 
-            log.info("Successfully added metadata to file: ${file.name}")
+            log.info("[{}] Successfully added metadata to file: ${file.name}", metadata)
 
         } catch (ex: Exception) {
             log.error("Failed to write metadata to MP4 file: ${file.absolutePath}", ex)
@@ -94,7 +94,7 @@ class MetaWriter {
         val nfoFile = File(file.parentFile, "${metadata.filename()}.nfo")
         try {
             if (nfoFile.exists()) {
-                log.warn("NFO file already exists for file: ${file.name}. Skipping writing.")
+                log.warn("[{}] NFO file already exists for file: ${file.name}. Skipping writing.", metadata)
                 return
             }
 
@@ -135,9 +135,9 @@ class MetaWriter {
                     writer.println("</movie>")
                 }
             }
-            log.info("Successfully wrote NFO file: ${nfoFile.absolutePath}")
+            log.info("[{}] Successfully wrote NFO file: ${nfoFile.absolutePath}", metadata)
         } catch (ex: Exception) {
-            log.error("Failed to write NFO file for: ${file.absolutePath}", ex)
+            log.error("[{}] Failed to write NFO file for: ${file.absolutePath}", metadata, ex)
         }
     }
 
