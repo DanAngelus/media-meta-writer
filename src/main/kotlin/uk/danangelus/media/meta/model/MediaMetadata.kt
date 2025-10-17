@@ -16,7 +16,7 @@ class MediaMetadata(
     var rating: String? = null,
     var length: String? = null,
     var director: String? = null,
-    var genre: String? = null,
+    var genre: List<String?>? = null,
     var studio: String? = null,
     var producers: List<String>? = null,
     var actors: List<Actor>? = null,

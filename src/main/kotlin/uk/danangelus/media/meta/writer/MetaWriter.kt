@@ -76,6 +76,23 @@ class MetaWriter {
         }
     }
 
+    /**
+     * Formats metadata into XML for compatibility with `UserDataBox` and `MetaBox`.
+     */
+    private fun buildXmlFromMetadata(metadata: MediaMetadata): String {
+        val builder = StringBuilder()
+        builder.append("<metadata>")
+        metadata.title?.let { builder.append("<title>$it</title>") }
+        metadata.plot?.let { builder.append("<description>$it</description>") }
+        metadata.length?.let { builder.append("<duration>$it</duration>") }
+        metadata.releaseDate?.let { builder.append("<releaseDate>$it</releaseDate>") }
+        metadata.year?.let { builder.append("<year>$it</year>") }
+        metadata.rating?.let { builder.append("<rating>$it</rating>") }
+        metadata.tmdbId?.let { builder.append("<tmdbId>$it</tmdbId>") }
+        builder.append("</metadata>")
+        return builder.toString()
+    }
+
     private fun writeMkvMetadata(file: File, metadata: MediaMetadata) {
         try {
             // Check if the file exists
@@ -112,7 +129,7 @@ class MetaWriter {
                     metadata.rating?.let { writer.println("  <rating>$it</rating>") }
                     metadata.studio?.let { writer.println("  <studio>$it</studio>") }
                     metadata.director?.let { writer.println("  <director>$it</director>") }
-                    metadata.genre?.let { writer.println("  <genre>$it</genre>") }
+                    metadata.genre?.forEach { writer.println("  <genre>$it</genre>") }
                     metadata.actors?.forEach {
                         writer.println("  <actor>")
                         writer.println("      <name>${it.actor}</name>")
@@ -139,20 +156,6 @@ class MetaWriter {
         } catch (ex: Exception) {
             log.error("[{}] Failed to write NFO file for: ${file.absolutePath}", metadata, ex)
         }
-    }
-
-    /**
-     * Formats metadata into XML for compatibility with `UserDataBox` and `MetaBox`.
-     */
-    private fun buildXmlFromMetadata(metadata: MediaMetadata): String {
-        val builder = StringBuilder()
-        builder.append("<metadata>")
-        metadata.title?.let { builder.append("<title>$it</title>") }
-        metadata.year?.let { builder.append("<year>$it</year>") }
-        metadata.rating?.let { builder.append("<rating>$it</rating>") }
-        metadata.tmdbId?.let { builder.append("<tmdbId>$it</tmdbId>") }
-        builder.append("</metadata>")
-        return builder.toString()
     }
 
     companion object {

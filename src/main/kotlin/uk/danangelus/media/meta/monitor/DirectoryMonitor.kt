@@ -50,14 +50,31 @@ class DirectoryMonitor(
                 return@forEach
             }
             if (it.extension.equals("nfo", true)) {
-                val content = it.toFile().readText()
-                    .replace("<logo>backdrop.png</logo>", "<backdrop>backdrop.jpg</backdrop>")
-                    .replace("<backdrop>backdrop.png</backdrop>", "<backdrop>backdrop.jpg</backdrop>")
-                    .replace("<logo>poster.png</logo>", "<poster>poster.jpg</poster>")
-                    .replace("<poster>poster.png</poster>", "<poster>poster.jpg</poster>")
-                    .replace("&", "&amp;")
-                log.info("Fixed NFO file: ${it.toFile().absolutePath}:\n$content")
-                Files.write(it, content.toByteArray())
+//                var content = it.toFile().readText()
+
+                // General content fixes
+//                    .replace("<logo>backdrop.png</logo>", "<backdrop>backdrop.jpg</backdrop>")
+//                    .replace("<backdrop>backdrop.png</backdrop>", "<backdrop>backdrop.jpg</backdrop>")
+//                    .replace("<logo>poster.png</logo>", "<poster>poster.jpg</poster>")
+//                    .replace("<poster>poster.png</poster>", "<poster>poster.jpg</poster>")
+//                    .replace("&", "&amp;")
+//                log.info("Fixed NFO file: ${it.toFile().absolutePath}:\n$content")
+
+                // Fix for genres being grouped in a single tag
+//                val genres = content.lines()
+//                    .filter { it.contains("<genre>") }
+//                    .joinToString()
+//                    .trim()
+//                val genresFixed = genres.trim()
+//                    .removePrefix("<genre>")
+//                    .removeSuffix("</genre>")
+//                    .split(",")
+//                    .toSet()
+//                    .joinToString("\n  ") { "<genre>$it</genre>" }
+//                content = content.replace(genres, genresFixed)
+//                log.info("Fixed genres in NFO file from:\n$genres \n$genresFixed")
+
+//                Files.write(it, content.toByteArray())
             }
         }
     }

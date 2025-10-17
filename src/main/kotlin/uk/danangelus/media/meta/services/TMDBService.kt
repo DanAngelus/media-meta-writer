@@ -87,7 +87,11 @@ class TMDBService(
             )
             val response = restTemplate.exchange<MovieSearchResponse>(request).body
 
-            val movieData = response?.results?.firstOrNull() // Take the first result
+            val movieData = response?.results
+                ?.firstOrNull {
+                    it.title?.equals(metadata.title, true) == true
+                        && it.releaseDate?.contains(metadata.year!!) == true
+                }
             if (movieData != null) {
                 metadata.tmdbId = movieData.id?.toString()
                 metadata.imdbId = movieData.imdbid
@@ -106,7 +110,7 @@ class TMDBService(
                         filmGenres[it]
                     }
                     ?.filter { it.isNullOrBlank().not() }
-                    ?.joinToString(",")
+                    ?.toMutableList()
 
                 val credits = getCast(metadata.tmdbId!!)
                 if (credits != null) {
