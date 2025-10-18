@@ -27,7 +27,7 @@ class MetaWriter {
         return try {
             // Write metadata into MP4 file
             if (SUPPORTED_MP4_FORMATS.contains(file.extension)) {
-                writeMp4Metadata(file, metadata)
+//                writeMp4Metadata(file, metadata)
             } else if (SUPPORTED_MKV_FORMATS.contains(file.extension)) {
                 writeMkvMetadata(file, metadata)
             } else {
@@ -120,25 +120,20 @@ class MetaWriter {
                     writer.println("<movie>")
                     writer.println("  <createdby>MediaMetaWriter by DanAngelus</createdby>")
                     metadata.title?.let { writer.println("  <title>$it</title>") }
-                    metadata.title?.let { writer.println("  <originaltitle>$it</originaltitle>") }
+                    metadata.originalTitle?.let { writer.println("  <originaltitle>$it</originaltitle>") }
                     metadata.plot?.let { writer.println("  <plot>$it</plot>") }
-                    metadata.outline?.let { writer.println("  <outline>$it</outline>") }
-                    metadata.length?.let { writer.println("  <runtime>$it</runtime>") }
-                    metadata.year?.let { writer.println("  <year>$it</year>") }
-                    metadata.releaseDate?.let { writer.println("  <fulldate>$it</fulldate>") }
-                    metadata.rating?.let { writer.println("  <rating>$it</rating>") }
-                    metadata.studio?.let { writer.println("  <studio>$it</studio>") }
-                    metadata.director?.let { writer.println("  <director>$it</director>") }
-                    metadata.genre?.forEach { writer.println("  <genre>$it</genre>") }
-                    metadata.actors?.forEach {
-                        writer.println("  <actor>")
-                        writer.println("      <name>${it.actor}</name>")
-                        writer.println("      <role>${it.character}</role>")
-                        writer.println("      <order>${it.order}</order>")
-                        writer.println("  </actor>")
+                    metadata.outline?.let { writer.println("  <tagline>$it</tagline>") }
+                    metadata.language?.let { writer.println("  <language>$it</language>") }
+                    metadata.length?.let { writer.println("  <runtime>${it.replace(" minutes", "")}</runtime>") }
+                    metadata.year?.let {
+                        writer.println("  <premiered>$it</premiered>")
+                        writer.println("  <year>$it</year>")
                     }
+                    metadata.releaseDate?.let { writer.println("  <releasedate>$it</releasedate>") }
+                    metadata.certification?.let { writer.println("  <certification>$it</certification>") }
                     metadata.tmdbId?.let { writer.println("  <uniqueid type=\"tmdb\" default=\"true\">$it</uniqueid>") }
-
+                    metadata.imdbId?.let { writer.println("  <uniqueid type=\"imdb\" default=\"true\">$it</uniqueid>") }
+                    metadata.rating?.let { writer.println("  <rating>$it</rating>") }
                     if (metadata.poster != null ||
                             metadata.logo != null ||
                             metadata.backdrop != null) {
@@ -148,7 +143,18 @@ class MetaWriter {
                         if (metadata.poster != null) writer.println("    <poster>poster.png</poster>")
                         writer.println("  </art>")
                     }
-
+                    metadata.keywords?.forEach { writer.println("  <tag>$it</tag>") }
+                    metadata.genre?.forEach { writer.println("  <genre>$it</genre>") }
+                    metadata.studio?.let { writer.println("  <studio>$it</studio>") }
+                    metadata.director?.let { writer.println("  <director>$it</director>") }
+                    metadata.producers?.forEach { writer.println("  <producer>$it</producer>") }
+                    metadata.actors?.forEach {
+                        writer.println("  <actor>")
+                        writer.println("      <name>${it.actor}</name>")
+                        writer.println("      <role>${it.character}</role>")
+                        writer.println("      <order>${it.order}</order>")
+                        writer.println("  </actor>")
+                    }
                     writer.println("</movie>")
                 }
             }

@@ -18,6 +18,7 @@ class MovieDetailsResponse(
     @field:JsonProperty("release_date") val releaseDate: String? = null,
     @field:JsonProperty("title") val title: String? = null,
     @field:JsonProperty("original_title") val originalTitle: String? = null,
+    @field:JsonProperty("original_language") val originalLanguage: String? = null,
     @field:JsonProperty("tagline") val tagline: String? = null,
     @field:JsonProperty("overview") val overview: String? = null,
     @field:JsonProperty("popularity") val popularity: Double? = null,
@@ -28,6 +29,7 @@ class MovieDetailsResponse(
     @field:JsonProperty("backdrop_path") val backdropPath: String? = null,
     @field:JsonProperty("logo_path") val logoPath: String? = null,
     @field:JsonProperty("poster_path") val posterPath: String? = null,
+    @field:JsonProperty("production_companies") val productionCompanies: List<ProductionCompany>? = null,
 ) {
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -35,5 +37,20 @@ class MovieDetailsResponse(
     class Genre(
         @field:JsonProperty("id") val id: Int? = null,
         @field:JsonProperty("name") val name: String? = null,
+    )
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    class Keyword(
+        @field:JsonProperty("id") val id: Int? = null,
+        @field:JsonProperty("name") val name: String? = null,
+    )
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    class ProductionCompany(
+        @field:JsonProperty("id") val id: Int? = null,
+        @field:JsonProperty("name") val name: String? = null,
+        @field:JsonProperty("logo_path") val logoPath: String? = null,
     )
 }

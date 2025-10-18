@@ -32,20 +32,20 @@ class FileOrganiser {
         return if (dest.exists() || dest.mkdirs()) {
             log.debug("[{}] Moving file: ${file.absolutePath} to: ${dest.absolutePath}", metadata)
             val newFile = File(dest, "${name}.${file.extension}")
-            Files.move(file.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+//            Files.move(file.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
             log.debug("[{}] File moved successfully: ${file.absolutePath} to: ${dest.absolutePath}", metadata)
 
-            Files.list(file.parentFile.toPath())
-                .filter { it.fileName.toString().startsWith("${file.nameWithoutExtension}.") }
-                .forEach {
-                    try {
-                        val dest = File(dest, it.name.replace(file.nameWithoutExtension, name))
-                        Files.move(it, dest.toPath())
-                        log.debug("[{}] File moved successfully: ${it.toFile().absolutePath} to: ${dest.absolutePath}", metadata)
-                    } catch (ex: Exception) {
-                        log.error("[{}] Failed to move file: ${it.toFile().absolutePath}", metadata, ex)
-                    }
-                }
+//            Files.list(file.parentFile.toPath())
+//                .filter { it.fileName.toString().startsWith("${file.nameWithoutExtension}.") }
+//                .forEach {
+//                    try {
+//                        val dest = File(dest, it.name.replace(file.nameWithoutExtension, name))
+//                        Files.move(it, dest.toPath())
+//                        log.debug("[{}] File moved successfully: ${it.toFile().absolutePath} to: ${dest.absolutePath}", metadata)
+//                    } catch (ex: Exception) {
+//                        log.error("[{}] Failed to move file: ${it.toFile().absolutePath}", metadata, ex)
+//                    }
+//                }
             newFile
         } else {
             log.warn("[{}] Failed to create directory: ${dest.absolutePath}", metadata)

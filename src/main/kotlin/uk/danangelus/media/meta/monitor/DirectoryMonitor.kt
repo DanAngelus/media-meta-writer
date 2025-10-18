@@ -50,9 +50,12 @@ class DirectoryMonitor(
                 return@forEach
             }
             if (it.extension.equals("nfo", true)) {
-//                var content = it.toFile().readText()
+                var content = it.toFile().readText()
 
                 // General content fixes
+                    .replace("<fulldate>", "<releasedate>")
+                    .replace("</fulldate>", "</releasedate>")
+                    .replace(" minutes</runtime>", "</runtime>")
 //                    .replace("<logo>backdrop.png</logo>", "<backdrop>backdrop.jpg</backdrop>")
 //                    .replace("<backdrop>backdrop.png</backdrop>", "<backdrop>backdrop.jpg</backdrop>")
 //                    .replace("<logo>poster.png</logo>", "<poster>poster.jpg</poster>")
@@ -74,7 +77,7 @@ class DirectoryMonitor(
 //                content = content.replace(genres, genresFixed)
 //                log.info("Fixed genres in NFO file from:\n$genres \n$genresFixed")
 
-//                Files.write(it, content.toByteArray())
+                Files.write(it, content.toByteArray())
             }
         }
     }

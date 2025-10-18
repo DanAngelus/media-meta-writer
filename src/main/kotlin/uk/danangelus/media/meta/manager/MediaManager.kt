@@ -1,7 +1,7 @@
 package uk.danangelus.media.meta.manager
 
-import org.mp4parser.tools.Path
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import uk.danangelus.media.meta.error.NoMatchException
 import uk.danangelus.media.meta.model.MediaCfg.Media
@@ -24,6 +24,7 @@ class MediaManager(
     private val mediaOrganiser: FileOrganiser,
     private val metaWriter: MetaWriter,
     private val tmdbService: TMDBService,
+    @Value("\${media.writing-enabled:true}") private val writingEnabled: Boolean,
 ) {
 
     fun registerMedia(media: Media, file: File) {
@@ -36,7 +37,7 @@ class MediaManager(
             log.info("[{}] Retrieving updated information from TMDB", metadata)
 
             try {
-                tmdbService.findMovie(metadata)
+                tmdbService.populateMovieDetails(metadata)
                 log.info("[{}] Retrieved data from TMDB", metadata)
             } catch (_: NoMatchException) {
                 mediaOrganiser.moveToNoMatch(media, file)
@@ -48,29 +49,34 @@ class MediaManager(
             }
 
             log.info("[{}] Writing updated data to: {}", file.absolutePath)
-            if (metaWriter.writeData(media, file, metadata)) {
+            if (writingEnabled && metaWriter.writeData(media, file, metadata)) {
                 log.info("[{}] Moving file: {} to new location: {}", metadata, file.absolutePath, media.destinationDirectory)
                 val newLocation = mediaOrganiser.organise(media, metadata, file)
                 if (newLocation != null) {
                     log.info("[{}] Video file moved to new location: {}", metadata, newLocation.absolutePath)
                     metaWriter.writeNfoFile(media, newLocation, metadata)
 
-                    if (metadata.backdrop != null) {
-                        val backdropPath = File(newLocation.parentFile, "backdrop.jpg").absolutePath
-                        Files.write(Paths.get(backdropPath), metadata.backdrop!!)
-                        log.info("[{}] Wrote backdrop to: {}", metadata, backdropPath)
-                    }
+                    if (metadata.backdrop != null || metadata.logo != null || metadata.poster != null) {
+                        val artworkLocation = newLocation.parentFile
 
-                    if (metadata.logo != null) {
-                        val logoPath = File(newLocation.parentFile, "logo.jpg").absolutePath
-                        Files.write(Paths.get(logoPath), metadata.logo!!)
-                        log.info("[{}] Wrote logo to: {}", metadata, logoPath)
-                    }
+                        log.info("[{}] Writing additional images to: {}", metadata, artworkLocation.absolutePath)
+                        if (metadata.backdrop != null) {
+                            val backdropPath = File(artworkLocation, "backdrop.jpg").absolutePath
+                            Files.write(Paths.get(backdropPath), metadata.backdrop!!)
+                            log.info("[{}] Wrote backdrop to: {}", metadata, backdropPath)
+                        }
 
-                    if (metadata.poster != null) {
-                        val posterPath = File(newLocation.parentFile, "poster.jpg").absolutePath
-                        Files.write(Paths.get(posterPath), metadata.poster!!)
-                        log.info("[{}] Wrote poster to: {}", metadata, posterPath)
+                        if (metadata.logo != null) {
+                            val logoPath = File(artworkLocation, "logo.jpg").absolutePath
+                            Files.write(Paths.get(logoPath), metadata.logo!!)
+                            log.info("[{}] Wrote logo to: {}", metadata, logoPath)
+                        }
+
+                        if (metadata.poster != null) {
+                            val posterPath = File(artworkLocation, "poster.jpg").absolutePath
+                            Files.write(Paths.get(posterPath), metadata.poster!!)
+                            log.info("[{}] Wrote poster to: {}", metadata, posterPath)
+                        }
                     }
                 }
                 log.info("**** [{}] FINISHED!", metadata)
