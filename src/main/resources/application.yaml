@@ -5,11 +5,19 @@ spring:
 server:
   port: 8666
 media:
+  enable:
+    create-nfo: true
+    find-artwork: true
+    move-video: true
+    move-files: true
+    write-to-mp4: true
+    write-to-mkv: false
   media:
     - type: FILM
       error-directory: C:/Users/me/Media/_error
       nomatch-directory: C:/Users/me/Media/_nomatch
       destination-directory: \\ZionMedia\media\Library\Films
+#      destination-directory: C:/Users/me/Media/_nfos
       source-directory: C:/Users/me/Media/_drop
 #    - type: SERIES
 #      source-directory: C:/Users/me/Media/_drop/Series

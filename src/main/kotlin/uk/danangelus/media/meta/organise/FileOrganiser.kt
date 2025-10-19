@@ -1,6 +1,7 @@
 package uk.danangelus.media.meta.organise
 
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import uk.danangelus.media.meta.model.MediaCfg
 import uk.danangelus.media.meta.model.MediaMetadata
@@ -16,7 +17,10 @@ import kotlin.io.path.name
  * @author Dan Bennett
  */
 @Service
-class FileOrganiser {
+class FileOrganiser(
+    @Value("\${media.enable.move-files}") private val movingFilesEnabled: Boolean,
+    @Value("\${media.enable.move-video}") private val movingVideoEnabled: Boolean,
+) {
 
     fun organise(media: MediaCfg.Media, metadata: MediaMetadata, file: File): File? {
         log.debug("[{}] Organising file: {}", metadata, file.absolutePath)
@@ -30,22 +34,26 @@ class FileOrganiser {
 
         val dest = File(media.destinationDirectory, name)
         return if (dest.exists() || dest.mkdirs()) {
-            log.debug("[{}] Moving file: ${file.absolutePath} to: ${dest.absolutePath}", metadata)
             val newFile = File(dest, "${name}.${file.extension}")
-//            Files.move(file.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
-            log.debug("[{}] File moved successfully: ${file.absolutePath} to: ${dest.absolutePath}", metadata)
-
-//            Files.list(file.parentFile.toPath())
-//                .filter { it.fileName.toString().startsWith("${file.nameWithoutExtension}.") }
-//                .forEach {
-//                    try {
-//                        val dest = File(dest, it.name.replace(file.nameWithoutExtension, name))
-//                        Files.move(it, dest.toPath())
-//                        log.debug("[{}] File moved successfully: ${it.toFile().absolutePath} to: ${dest.absolutePath}", metadata)
-//                    } catch (ex: Exception) {
-//                        log.error("[{}] Failed to move file: ${it.toFile().absolutePath}", metadata, ex)
-//                    }
-//                }
+            if (movingVideoEnabled) {
+                log.debug("[{}] Moving file: ${file.absolutePath} to: ${dest.absolutePath}", metadata)
+                Files.move(file.toPath(), newFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                log.debug("[{}] File moved successfully: ${file.absolutePath} to: ${dest.absolutePath}", metadata)
+            }
+            if (movingFilesEnabled) {
+                log.debug("[{}] Moving similar files: ${file.absolutePath} to: ${dest.absolutePath}", metadata)
+                Files.list(file.parentFile.toPath())
+                    .filter { it.fileName.toString().startsWith("${file.nameWithoutExtension}.") }
+                    .forEach {
+                        try {
+                            val dest = File(dest, it.name.replace(file.nameWithoutExtension, name))
+                            Files.move(it, dest.toPath())
+                            log.debug("[{}] File moved successfully: ${it.toFile().absolutePath} to: ${dest.absolutePath}", metadata)
+                        } catch (ex: Exception) {
+                            log.error("[{}] Failed to move file: ${it.toFile().absolutePath}", metadata, ex)
+                        }
+                    }
+            }
             newFile
         } else {
             log.warn("[{}] Failed to create directory: ${dest.absolutePath}", metadata)
@@ -54,12 +62,15 @@ class FileOrganiser {
     }
 
     fun moveToNoMatch(mediaCfg: MediaCfg.Media, file: File) {
-        Files.move(file.toPath(), File(mediaCfg.nomatchDirectory, file.name).toPath())
+        if (movingFilesEnabled) {
+            Files.move(file.toPath(), File(mediaCfg.nomatchDirectory, file.name).toPath())
+        }
     }
 
     fun moveToError(mediaCfg: MediaCfg.Media, file: File) {
-        Files.move(file.toPath(), File(mediaCfg.errorDirectory, file.name).toPath())
-
+        if (movingFilesEnabled) {
+            Files.move(file.toPath(), File(mediaCfg.errorDirectory, file.name).toPath())
+        }
     }
 
     companion object {

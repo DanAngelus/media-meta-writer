@@ -5,6 +5,7 @@ import org.mp4parser.boxes.iso14496.part12.MetaBox
 import org.mp4parser.boxes.iso14496.part12.UserDataBox
 import org.mp4parser.boxes.iso14496.part12.XmlBox
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import uk.danangelus.media.meta.model.MediaCfg.Media
 import uk.danangelus.media.meta.model.MediaMetadata
@@ -19,16 +20,19 @@ import java.io.FileOutputStream
  * @author Dan Bennett
  */
 @Service
-class MetaWriter {
+class MetaWriter(
+    @Value("\${media.enable.write-to-mp4}") private val writingToMp4Enabled: Boolean,
+    @Value("\${media.enable.write-to-mkv}") private val writingToMkvEnabled: Boolean,
+) {
 
     fun writeData(media: Media, file: File, metadata: MediaMetadata): Boolean {
         log.debug("Starting to process metadata for file: ${file.absolutePath}")
 
         return try {
             // Write metadata into MP4 file
-            if (SUPPORTED_MP4_FORMATS.contains(file.extension)) {
-//                writeMp4Metadata(file, metadata)
-            } else if (SUPPORTED_MKV_FORMATS.contains(file.extension)) {
+            if (writingToMp4Enabled && SUPPORTED_MP4_FORMATS.contains(file.extension)) {
+                writeMp4Metadata(file, metadata)
+            } else if (writingToMkvEnabled && SUPPORTED_MKV_FORMATS.contains(file.extension)) {
                 writeMkvMetadata(file, metadata)
             } else {
                 log.warn("[{}] Unsupported file extension: ${file.extension}. Skipping metadata writing for ${file.name}", metadata)
@@ -129,8 +133,8 @@ class MetaWriter {
                         writer.println("  <premiered>$it</premiered>")
                         writer.println("  <year>$it</year>")
                     }
-                    metadata.releaseDate?.let { writer.println("  <releasedate>$it</releasedate>") }
-                    metadata.certification?.let { writer.println("  <certification>$it</certification>") }
+                    metadata.releaseDate?.let { writer.println("  <releasedate>${it.substring(0,10)}</releasedate>") }
+                    metadata.certification?.let { writer.println("  <mpaa>GB-$it</mpaa>") }
                     metadata.tmdbId?.let { writer.println("  <uniqueid type=\"tmdb\" default=\"true\">$it</uniqueid>") }
                     metadata.imdbId?.let { writer.println("  <uniqueid type=\"imdb\" default=\"true\">$it</uniqueid>") }
                     metadata.rating?.let { writer.println("  <rating>$it</rating>") }

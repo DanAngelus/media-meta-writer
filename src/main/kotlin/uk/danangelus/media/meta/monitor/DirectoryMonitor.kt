@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service
 import uk.danangelus.media.meta.manager.MediaManager
 import uk.danangelus.media.meta.model.MediaCfg
 import uk.danangelus.media.meta.model.MediaCfg.Media
+import uk.danangelus.media.meta.model.MediaMetadata
+import uk.danangelus.media.meta.reader.MediaReader
 import java.io.File
 import java.nio.file.*
 import java.util.concurrent.Executors
@@ -23,6 +25,8 @@ import kotlin.io.path.isDirectory
 class DirectoryMonitor(
     private val mediaManager: MediaManager,
     private val mediaCfg: MediaCfg,
+    private val mediaReader: MediaReader,
+    cfg: MediaCfg,
 //    @Value("\${media.source-directory}") private val sourceDirectories: Map<String, String>,
 ) {
 
@@ -36,7 +40,31 @@ class DirectoryMonitor(
             dirToMedia[File(media.sourceDirectory).absolutePath] = media
         }
 
-//        fixNfoFiles("\\\\ZionMedia\\media\\Library\\Films")
+        fixNfoFiles("\\\\ZionMedia\\media\\Library\\Films")
+//        createNfoFiles("C:\\Developer\\Projects\\DanAngelus.UK\\media-meta-writer\\films")
+    }
+
+    private fun createNfoFiles(list: String) {
+        val filmsList = Paths.get(list).toFile().readText()
+        filmsList.lines().forEach {
+            val media = mediaCfg.media.first()
+            val metadata = MediaMetadata(
+                title = mediaReader.getTitle(it),
+                year = mediaReader.getYear(it),
+            )
+            val root = File(media.destinationDirectory, metadata.filename())
+            if (root.exists()) {
+                return@forEach
+            }
+
+            mediaManager.populateMetadata(media, metadata)
+
+            if (root.mkdirs()) {
+                mediaManager.createNfo(media, metadata, File(root, "nothing"))
+            } else {
+                log.warn("WARNING ****************************************** Failed to create directory: {}", root.absolutePath)
+            }
+        }
     }
 
     private fun fixNfoFiles(directory: String) {
@@ -53,9 +81,10 @@ class DirectoryMonitor(
                 var content = it.toFile().readText()
 
                 // General content fixes
-                    .replace("<fulldate>", "<releasedate>")
-                    .replace("</fulldate>", "</releasedate>")
-                    .replace(" minutes</runtime>", "</runtime>")
+                    .replace("</certification>", "</mpaa>")
+//                    .replace("<fulldate>", "<releasedate>")
+//                    .replace("</fulldate>", "</releasedate>")
+//                    .replace(" minutes</runtime>", "</runtime>")
 //                    .replace("<logo>backdrop.png</logo>", "<backdrop>backdrop.jpg</backdrop>")
 //                    .replace("<backdrop>backdrop.png</backdrop>", "<backdrop>backdrop.jpg</backdrop>")
 //                    .replace("<logo>poster.png</logo>", "<poster>poster.jpg</poster>")
@@ -85,7 +114,7 @@ class DirectoryMonitor(
     /**
      * Monitors directories from the configuration and processes new files.
      */
-    @Scheduled(initialDelay = 3000, fixedDelay = Long.MAX_VALUE)
+//    @Scheduled(initialDelay = 3000, fixedDelay = Long.MAX_VALUE)
     fun monitor() {
         // Ensure configuration is valid
         if (mediaCfg.media.isEmpty()) {
