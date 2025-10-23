@@ -78,7 +78,7 @@ class FilmManager(
 
     fun createNfo(media: Media, metadata: MediaMetadata, newLocation: File) {
         if (createNfoEnabled) {
-            metaWriter.writeNfoFile(media, newLocation, metadata)
+            metaWriter.writeFilmDataToNfo(media, newLocation, metadata)
         }
     }
 

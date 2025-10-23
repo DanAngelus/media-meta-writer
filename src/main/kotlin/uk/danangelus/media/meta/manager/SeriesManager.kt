@@ -1,11 +1,11 @@
 package uk.danangelus.media.meta.manager
 
+import org.apache.poi.hssf.usermodel.HeaderFooter.file
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import uk.danangelus.media.meta.error.NoMatchException
 import uk.danangelus.media.meta.model.MediaCfg.Media
-import uk.danangelus.media.meta.model.MediaMetadata
 import uk.danangelus.media.meta.organise.FileOrganiser
 import uk.danangelus.media.meta.services.TMDBService
 import uk.danangelus.media.meta.services.model.Series
@@ -24,45 +24,77 @@ class SeriesManager(
     private val mediaOrganiser: FileOrganiser,
     private val metaWriter: MetaWriter,
     private val tmdbService: TMDBService,
-    @Value("\${media.enable.create-nfo}") private val createNfoEnabled: Boolean,
+    @Value("\${media.enable.create-nfo:true}") private val createNfoEnabled: Boolean,
     @Value("\${media.enable.find-artwork}") private val findArtworkEnabled: Boolean,
 ) {
 
-    fun register(media: Media, file: File) {
+    fun register(media: Media, seriesDir: File) {
         try {
-            val (seriesName, seriesYear) = retrieveFileData(file)
+            val (seriesName, seriesYear) = retrieveFileData(seriesDir)
             if (seriesName == null || seriesYear == null) return
             val series = getSeriesMetadata(seriesName, seriesYear)
             if (series == null) return
+            series.directory = seriesDir
 
             log.info("[{}] Retrieving series information from TMDB", series)
-            Files.list(file.toPath()).forEach { seasonDir ->
+            Files.list(seriesDir.toPath()).forEach { seasonDir ->
                 val seasonNumber = seasonDir.fileName.toString().substringAfter("Season ").trim()
                 val season = getSeasonMetadata(series, seasonNumber)
+                season.directory = seasonDir.toFile()
+                season.episodes = season.episodes?.toMutableList()
                 Files.list(seasonDir).forEach {
-                    val file = it.toFile()
+                    try {
+                        val file = it.toFile()
 
-                    val (episodeNumber, title) = retrieveFileData(seasonDir.fileName.toString(), file)
-                    val episode = getEpisodeMetadata(series, season, episodeNumber, title)
-                    // ToDo :: Find top level series names and search tmdb
-                    processMedia(
-                        series,
-                        season,
-                        episode,
-                        file
-                    )
-                    // ToDo :: Find season numbers
-                    // ToDo :: Find episode name/number
-                    // ToDo :: Search TMDB for episode details
-                    // ToDo :: Create .nfo file in TV format
-                    log.info("[{}] Retrieving updated information from TMDB", series ?: "Unknown")
+                        val (episodeNumber, title) = retrieveFileData(seasonDir.fileName.toString(), file)
+                        getEpisodeMetadata(series, season, episodeNumber, title)
+                        log.info("[{}] Retrieving updated information from TMDB", series ?: "Unknown")
+                    } catch (ex: Exception) {
+                        log.error("[{}] Failed to process file: {}", series, it.toFile().absolutePath, ex)
+                    }
                 }
             }
-            //            processMedia(media, metadata, file)
+            processMedia(series)
         } catch (ex: Exception) {
-            log.error("Error while processing file: ${file.absolutePath}", ex)
-            mediaOrganiser.moveToError(media, file)
+            log.error("Error while processing file: ${seriesDir.absolutePath}", ex)
+            mediaOrganiser.moveToError(media, seriesDir)
         }
+    }
+
+    fun getSeriesMetadata(name: String, year: String): Series? {
+        val metadata = tmdbService.findSeries(name, year)
+        log.info("[{}] Retrieved data from TMDB", metadata)
+        return metadata
+    }
+
+    fun getSeasonMetadata(series: Series, seasonNumber: String): Series.Season {
+        val season = series.seasons?.firstOrNull { it.seasonNumber.equals(seasonNumber, true) }
+
+        log.info("[{}] Found matching season: {}", series, season)
+        if (season == null) {
+            log.info("[{}] No matching season found for: {}", series, seasonNumber)
+            throw NoMatchException("No matching season found for: $seasonNumber")
+        }
+        val fullSeasonDetails = tmdbService.getSeason(series.id.toString(), series.name!!, season.seasonNumber!!)
+            ?: throw NoMatchException("No matching season found for: $seasonNumber")
+
+        season.episodes = fullSeasonDetails.episodes
+        return season
+    }
+
+    fun getEpisodeMetadata(series: Series, season: Series.Season, episodeNumber: String, title: String): Series.Episode {
+        val episode = season.episodes?.firstOrNull { it.episodeNumber.equals(episodeNumber, true) }
+
+        log.info("[{} - {}] Found matching episode: {}", series, season, episode)
+        return episode ?: throw NoMatchException("No matching season found for: $episodeNumber")
+    }
+
+    fun getTitle(fileName: String): String? {
+        return fileName.split("(").first().trim().ifBlank { null }
+    }
+
+    fun getYear(fileName: String): String? {
+        return fileName.substringAfter("(").substringBefore(")").trim().ifBlank { null }
     }
 
     fun retrieveFileData(file: File): Pair<String?, String?> {
@@ -83,96 +115,66 @@ class SeriesManager(
         return Pair(fileName, "")
     }
 
-    fun processMedia(
-        series: Series,
-        season: Series.Season,
-        episode: Series.Episode,
-        file: File,
-    ) {
+    fun processMedia(series: Series) {
         try {
 
-            log.info("[{}] Writing updated data to", file.absolutePath)
-//            if (metaWriter.writeData(media, file, metadata)) {
-//                log.info("[{}] Moving file: {} to new location: {}", metadata, file.absolutePath, media.destinationDirectory)
-//                val newLocation = mediaOrganiser.organise(media, metadata, file)
-//                if (newLocation != null) {
-//                    log.info("[{}] Video file moved to new location: {}", metadata, newLocation.absolutePath)
-//
-//                    createNfo(media, metadata, newLocation)
-//                    findArtwork(metadata, newLocation)
-//                }
-                log.info("**** [{}] FINISHED!", series)
-//            }
+            log.info("[{}] Writing updated data to", series.directory?.absolutePath)
+            if (createNfoEnabled) metaWriter.writeSeriesDataToNfo(series.directory!!, series)
+            findArtwork(series, series.directory!!)
+            series.seasons?.forEach { season ->
+                if (createNfoEnabled) metaWriter.writeSeasonDataToNfo(season.directory!!, series, season)
+                findArtwork(season, season.directory!!)
+                season.episodes?.forEach { episode ->
+                    if (createNfoEnabled) metaWriter.writeEpisodeDataToNfo(season.directory!!, series, season, episode)
+                    findArtwork(episode, season.directory!!)
+                }
+            }
+
+            log.info("**** [{}] FINISHED!", series)
         } catch (_: NoMatchException) {
-//            mediaOrganiser.moveToNoMatch(series, file)
+            log.error("Failed to find a match for: ${series.directory?.absolutePath}")
         } catch (ex: Exception) {
-            log.error("Error while processing file: ${file.absolutePath}", ex)
-//            mediaOrganiser.moveToError(media, file)
+            log.error("Error while processing file: ${series.directory?.absolutePath}", ex)
         }
     }
 
-    fun getSeriesMetadata(name: String, year: String): Series? {
-        val metadata = tmdbService.findSeries(name, year)
-        log.info("[{}] Retrieved data from TMDB", metadata)
-        return metadata
-    }
-
-    fun getSeasonMetadata(series: Series, seasonNumber: String): Series.Season {
-        val season = series.seasons?.firstOrNull { it.seasonNumber.equals(seasonNumber, true) }
-
-        log.info("[{}] Found matching season: {}", series, season)
-        if (season == null) {
-            log.info("[{}] No matching season found for: {}", series, seasonNumber)
-            throw NoMatchException("No matching season found for: $seasonNumber")
-        }
-        return tmdbService.getSeason(series.id.toString(), series.name!!, season.seasonNumber!!)
-            ?: throw NoMatchException("No matching season found for: $seasonNumber")
-    }
-
-    fun getEpisodeMetadata(series: Series, season: Series.Season, episodeNumber: String, title: String): Series.Episode {
-        val episode = season.episodes?.firstOrNull { it.episodeNumber.equals(episodeNumber, true) }
-
-        log.info("[{} - {}] Found matching episode: {}", series, season, episode)
-        return episode ?: throw NoMatchException("No matching season found for: $episodeNumber")
-    }
-
-    fun createNfo(media: Media, metadata: MediaMetadata, newLocation: File) {
-        if (createNfoEnabled) {
-            metaWriter.writeNfoFile(media, newLocation, metadata)
-        }
-    }
-
-    fun findArtwork(metadata: MediaMetadata, newLocation: File) {
-        if (findArtworkEnabled && metadata.backdrop != null || metadata.logo != null || metadata.poster != null) {
-            val artworkLocation = newLocation.parentFile
-
-            log.info("[{}] Writing additional images to: {}", metadata, artworkLocation.absolutePath)
-            if (metadata.backdrop != null) {
+    fun findArtwork(series: Series, artworkLocation: File) {
+        if (findArtworkEnabled && (series.backdrop != null || series.poster != null)) {
+            log.info("[{}] Writing additional images to: {}", series, artworkLocation.absolutePath)
+            if (series.backdrop != null) {
                 val backdropPath = File(artworkLocation, "backdrop.jpg").absolutePath
-                Files.write(Paths.get(backdropPath), metadata.backdrop!!)
-                log.info("[{}] Wrote backdrop to: {}", metadata, backdropPath)
+                Files.write(Paths.get(backdropPath), series.backdrop!!)
+                log.info("[{}] Wrote backdrop to: {}", series, backdropPath)
             }
 
-            if (metadata.logo != null) {
-                val logoPath = File(artworkLocation, "logo.jpg").absolutePath
-                Files.write(Paths.get(logoPath), metadata.logo!!)
-                log.info("[{}] Wrote logo to: {}", metadata, logoPath)
-            }
-
-            if (metadata.poster != null) {
+            if (series.poster != null) {
                 val posterPath = File(artworkLocation, "poster.jpg").absolutePath
-                Files.write(Paths.get(posterPath), metadata.poster!!)
-                log.info("[{}] Wrote poster to: {}", metadata, posterPath)
+                Files.write(Paths.get(posterPath), series.poster!!)
+                log.info("[{}] Wrote poster to: {}", series, posterPath)
             }
         }
     }
 
-    fun getTitle(fileName: String): String? {
-        return fileName.split("(").first().trim().ifBlank { null }
+    fun findArtwork(season: Series.Season, artworkLocation: File) {
+        if (findArtworkEnabled && season.poster != null) {
+            log.info("[{}] Writing additional images to: {}", season, artworkLocation.absolutePath)
+
+            if (season.poster != null) {
+                val posterPath = File(artworkLocation, "poster.jpg").absolutePath
+                Files.write(Paths.get(posterPath), season.poster!!)
+                log.info("[{}] Wrote poster to: {}", season, posterPath)
+            }
+        }
     }
 
-    fun getYear(fileName: String): String? {
-        return fileName.substringAfter("(").substringBefore(")").trim().ifBlank { null }
+    fun findArtwork(episode: Series.Episode, artworkLocation: File) {
+        if (findArtworkEnabled && episode.still != null) {
+            log.info("[{}] Writing additional images to: {}", episode, artworkLocation.absolutePath)
+
+            val stillPath = File(artworkLocation, "still.jpg").absolutePath
+            Files.write(Paths.get(stillPath), episode.still!!)
+            log.info("[{}] Wrote poster to: {}", episode, stillPath)
+        }
     }
 
     companion object {

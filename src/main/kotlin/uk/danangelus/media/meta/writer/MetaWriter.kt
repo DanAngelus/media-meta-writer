@@ -11,6 +11,7 @@ import uk.danangelus.media.meta.model.MediaCfg.Media
 import uk.danangelus.media.meta.model.MediaMetadata
 import uk.danangelus.media.meta.model.MediaType
 import uk.danangelus.media.meta.monitor.DirectoryMonitor
+import uk.danangelus.media.meta.services.model.Series
 import java.io.File
 import java.io.FileOutputStream
 
@@ -111,7 +112,7 @@ class MetaWriter(
         }
     }
 
-    fun writeNfoFile(media: Media, file: File, metadata: MediaMetadata) {
+    fun writeFilmDataToNfo(media: Media, file: File, metadata: MediaMetadata) {
         val nfoFile = File(file.parentFile, "${metadata.filename()}.nfo")
         try {
             if (nfoFile.exists()) {
@@ -142,9 +143,9 @@ class MetaWriter(
                             metadata.logo != null ||
                             metadata.backdrop != null) {
                         writer.println("  <art>")
-                        if (metadata.backdrop != null) writer.println("    <backdrop>backdrop.png</backdrop>")
-                        if (metadata.logo != null) writer.println("    <logo>logo.png</logo>")
-                        if (metadata.poster != null) writer.println("    <poster>poster.png</poster>")
+                        if (metadata.backdrop != null) writer.println("    <backdrop>backdrop.jpg</backdrop>")
+                        if (metadata.logo != null) writer.println("    <logo>logo.jpg</logo>")
+                        if (metadata.poster != null) writer.println("    <poster>poster.jpg</poster>")
                         writer.println("  </art>")
                     }
                     metadata.keywords?.forEach { writer.println("  <tag>$it</tag>") }
@@ -165,6 +166,117 @@ class MetaWriter(
             log.info("[{}] Successfully wrote NFO file: ${nfoFile.absolutePath}", metadata)
         } catch (ex: Exception) {
             log.error("[{}] Failed to write NFO file for: ${file.absolutePath}", metadata, ex)
+        }
+    }
+
+    fun writeSeriesDataToNfo(
+        seriesDir: File,
+        series: Series,
+    ) {
+        val nfoFile = File(seriesDir, "tvshow.nfo")
+        try {
+            if (nfoFile.exists()) {
+                log.warn("[{}] NFO file already exists for file: ${seriesDir.name}. Skipping writing.", series)
+                return
+            }
+
+                nfoFile.printWriter().use { writer ->
+                    writer.println("<tvshow>")
+                    writer.println("  <createdby>MediaMetaWriter by DanAngelus</createdby>")
+                    series.name?.let { writer.println("  <title>$it</title>") }
+                    series.originalName?.let { writer.println("  <originaltitle>$it</originaltitle>") }
+                    series.overview?.let { writer.println("  <plot>$it</plot>") }
+                    series.tagline?.let { writer.println("  <tagline>$it</tagline>") }
+                    series.originalLanguage?.let { writer.println("  <language>$it</language>") }
+                    series.year?.let { writer.println("  <premiered>$it</premiered>") }
+                    series.status?.let { writer.println("  <status>$it</status>") }
+                    series.voteAverage?.let { writer.println("  <userrating>${it}</userrating>") }
+//                    series.certification?.let { writer.println("  <mpaa>GB-$it</mpaa>") }
+                    series.id?.let { writer.println("  <uniqueid type=\"tmdb\" default=\"true\">$it</uniqueid>") }
+//                    series.imdbId?.let { writer.println("  <uniqueid type=\"imdb\" default=\"true\">$it</uniqueid>") }
+                    if (series.poster != null ||
+                        series.backdrop != null) {
+                        writer.println("  <art>")
+                        if (series.backdrop != null) writer.println("    <backdrop>backdrop.jpg</backdrop>")
+                        if (series.poster != null) writer.println("    <poster>poster.jpg</poster>")
+                        writer.println("  </art>")
+                    }
+//                    series.keywords?.forEach { writer.println("  <tag>$it</tag>") }
+//                    series.genre?.forEach { writer.println("  <genre>$it</genre>") }
+//                    series.studio?.let { writer.println("  <studio>$it</studio>") }
+//                    series.director?.let { writer.println("  <director>$it</director>") }
+//                    series.producers?.forEach { writer.println("  <producer>$it</producer>") }
+//                    series.actors?.forEach {
+//                        writer.println("  <actor>")
+//                        writer.println("      <name>${it.actor}</name>")
+//                        writer.println("      <role>${it.character}</role>")
+//                        writer.println("      <order>${it.order}</order>")
+//                        writer.println("  </actor>")
+//                    }
+                    writer.println("</tvshow>")
+            }
+            log.info("[{}] Successfully wrote NFO file: ${nfoFile.absolutePath}", series)
+        } catch (ex: Exception) {
+            log.error("[{}] Failed to write NFO file for: ${seriesDir.absolutePath}", series, ex)
+        }
+    }
+
+    fun writeSeasonDataToNfo(
+        seasonDir: File,
+        series: Series,
+        season: Series.Season,
+    ) {
+    }
+
+    fun writeEpisodeDataToNfo(
+        seasonDir: File,
+        series: Series,
+        season: Series.Season,
+        episode: Series.Episode,
+    ) {
+        val nfoFile = File(seasonDir, "tvshow.nfo")
+        try {
+            if (nfoFile.exists()) {
+                log.warn("[{}] NFO file already exists for file: ${seasonDir.name}. Skipping writing.", series)
+                return
+            }
+
+            nfoFile.printWriter().use { writer ->
+                writer.println("<episodedetails>")
+                writer.println("  <createdby>MediaMetaWriter by DanAngelus</createdby>")
+                season.seasonNumber?.let { writer.println("  <season>$it</season>") }
+                episode.episodeNumber?.let { writer.println("  <episode>$it</episode>") }
+                episode.name?.let { writer.println("  <title>$it</title>") }
+                episode.overview?.let { writer.println("  <plot>$it</plot>") }
+                episode.voteAverage?.let { writer.println("  <userrating>${it}</userrating>") }
+                episode.airDate?.let { writer.println("  <aired>${it}</aired>") }
+//                    series.certification?.let { writer.println("  <mpaa>GB-$it</mpaa>") }
+                episode.id?.let { writer.println("  <uniqueid type=\"tmdb\" default=\"true\">$it</uniqueid>") }
+//                    series.imdbId?.let { writer.println("  <uniqueid type=\"imdb\" default=\"true\">$it</uniqueid>") }
+                if (series.poster != null ||
+                    series.backdrop != null) {
+                    writer.println("  <art>")
+                    if (series.backdrop != null) writer.println("    <backdrop>backdrop.jpg</backdrop>")
+                    if (series.poster != null) writer.println("    <poster>poster.jpg</poster>")
+                    writer.println("  </art>")
+                }
+//                    series.keywords?.forEach { writer.println("  <tag>$it</tag>") }
+//                    series.genre?.forEach { writer.println("  <genre>$it</genre>") }
+//                    series.studio?.let { writer.println("  <studio>$it</studio>") }
+//                    series.director?.let { writer.println("  <director>$it</director>") }
+//                    series.producers?.forEach { writer.println("  <producer>$it</producer>") }
+//                    series.actors?.forEach {
+//                        writer.println("  <actor>")
+//                        writer.println("      <name>${it.actor}</name>")
+//                        writer.println("      <role>${it.character}</role>")
+//                        writer.println("      <order>${it.order}</order>")
+//                        writer.println("  </actor>")
+//                    }
+                writer.println("</episodedetails>")
+            }
+            log.info("[{}] Successfully wrote NFO file: ${nfoFile.absolutePath}", series)
+        } catch (ex: Exception) {
+            log.error("[{}] Failed to write NFO file for: ${seasonDir.absolutePath}", series, ex)
         }
     }
 

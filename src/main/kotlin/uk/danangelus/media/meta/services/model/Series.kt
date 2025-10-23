@@ -3,6 +3,7 @@ package uk.danangelus.media.meta.services.model
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
+import java.io.File
 
 /**
  * Represents a response from the TMDB TV details API
@@ -35,19 +36,65 @@ class Series(
     @field:JsonProperty("poster_path") val posterPath: String? = null,
     @field:JsonProperty("production_companies") val productionCompanies: List<ProductionCompany>? = null,
     @field:JsonProperty("production_countries") val productionCountries: List<Country>? = null,
-    @field:JsonProperty("seasons") val seasons: List<Season>? = null,
+    @field:JsonProperty("seasons") var seasons: MutableList<Season>? = null,
     @field:JsonProperty("spoken_languages") val spokenLanguages: List<Language>? = null,
     @field:JsonProperty("status") val status: String? = null,
     @field:JsonProperty("tagline") val tagline: String? = null,
     @field:JsonProperty("type") val type: String? = null,
     @field:JsonProperty("vote_average") val voteAverage: Double? = null,
     @field:JsonProperty("vote_count") val voteCount: Int? = null,
+    @Transient var directory: File? = null,
+    @Transient var poster: ByteArray? = null,
+    @Transient var backdrop: ByteArray? = null,
 ) {
 
     val year: String? = firstAirDate?.substring(0, 4)
 
     override fun toString(): String {
         return "${name ?: originalName ?: "Unknown"} (${year ?: "Unknown"})"
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    class Season(
+        @field:JsonProperty("air_date") val airDate: String? = null,
+        @field:JsonProperty("episode_count") val episodeCount: Int? = null,
+        @field:JsonProperty("episodes") var episodes: MutableList<Episode>? = null,
+        @field:JsonProperty("id") val id: Int? = null,
+        @field:JsonProperty("name") val name: String? = null,
+        @field:JsonProperty("overview") val overview: String? = null,
+        @field:JsonProperty("poster_path") val posterPath: String? = null,
+        @field:JsonProperty("season_number") val seasonNumber: String? = null,
+        @field:JsonProperty("vote_average") val voteAverage: Double? = null,
+        @Transient var directory: File? = null,
+        @Transient var poster: ByteArray? = null,
+    ) {
+        override fun toString(): String {
+            return name ?: "Season $seasonNumber"
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    class Episode(
+        @field:JsonProperty("id") val id: Int? = null,
+        @field:JsonProperty("name") val name: String? = null,
+        @field:JsonProperty("overview") val overview: String? = null,
+        @field:JsonProperty("vote_average") val voteAverage: Double? = null,
+        @field:JsonProperty("vote_count") val voteCount: Int? = null,
+        @field:JsonProperty("air_date") val airDate: String? = null,
+        @field:JsonProperty("episode_number") val episodeNumber: String? = null,
+        @field:JsonProperty("episode_type") val episodeType: String? = null,
+        @field:JsonProperty("production_code") val productionCode: String? = null,
+        @field:JsonProperty("runtime") val runtime: Int? = null,
+        @field:JsonProperty("season_number") val seasonNumber: Int? = null,
+        @field:JsonProperty("show_id") val showId: Int? = null,
+        @field:JsonProperty("still_path") val stillPath: String? = null,
+        @Transient var still: ByteArray? = null,
+    ) {
+        override fun toString(): String {
+            return "s${seasonNumber}e$episodeNumber - $name"
+        }
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -73,28 +120,6 @@ class Series(
     ) {
         override fun toString(): String {
             return name ?: originalName ?: "Unknown"
-        }
-    }
-
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    class Episode(
-        @field:JsonProperty("id") val id: Int? = null,
-        @field:JsonProperty("name") val name: String? = null,
-        @field:JsonProperty("overview") val overview: String? = null,
-        @field:JsonProperty("vote_average") val voteAverage: Double? = null,
-        @field:JsonProperty("vote_count") val voteCount: Int? = null,
-        @field:JsonProperty("air_date") val airDate: String? = null,
-        @field:JsonProperty("episode_number") val episodeNumber: String? = null,
-        @field:JsonProperty("episode_type") val episodeType: String? = null,
-        @field:JsonProperty("production_code") val productionCode: String? = null,
-        @field:JsonProperty("runtime") val runtime: Int? = null,
-        @field:JsonProperty("season_number") val seasonNumber: Int? = null,
-        @field:JsonProperty("show_id") val showId: Int? = null,
-        @field:JsonProperty("still_path") val stillPath: String? = null,
-    ) {
-        override fun toString(): String {
-            return "s${seasonNumber}e$episodeNumber - $name"
         }
     }
 
@@ -143,24 +168,6 @@ class Series(
     ) {
         override fun toString(): String {
             return name ?: "Unknown"
-        }
-    }
-
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    class Season(
-        @field:JsonProperty("air_date") val airDate: String? = null,
-        @field:JsonProperty("episode_count") val episodeCount: Int? = null,
-        @field:JsonProperty("episodes") val episodes: List<Episode>? = null,
-        @field:JsonProperty("id") val id: Int? = null,
-        @field:JsonProperty("name") val name: String? = null,
-        @field:JsonProperty("overview") val overview: String? = null,
-        @field:JsonProperty("poster_path") val posterPath: String? = null,
-        @field:JsonProperty("season_number") val seasonNumber: String? = null,
-        @field:JsonProperty("vote_average") val voteAverage: Double? = null,
-    ) {
-        override fun toString(): String {
-            return name ?: "Season $seasonNumber"
         }
     }
 }

@@ -291,7 +291,10 @@ class TMDBService(
                     HttpMethod.GET,
                     uri,
                 )
-                return restTemplate.exchange<Series?>(request)?.body
+                val series = restTemplate.exchange<Series?>(request).body!!
+                if (series.backdropPath.isNullOrBlank().not()) series.backdrop = retrieveImage(series.backdropPath)
+                if (series.posterPath.isNullOrBlank().not()) series.poster = retrieveImage(series.posterPath)
+                return series
             } else {
                 log.warn("[{} ({})] No results found on TMDb for title", title, year)
                 throw NoMatchException("No results found on TMDb for title: ${title}")
@@ -321,8 +324,9 @@ class TMDBService(
                 HttpMethod.GET,
                 uri,
             )
-            return restTemplate.exchange<Series.Season>(request).body
-
+            val season = restTemplate.exchange<Series.Season>(request).body!!
+            if (season.posterPath.isNullOrBlank().not()) season.poster = retrieveImage(season.posterPath)
+            return season
         } catch (ex: NoMatchException) {
             throw ex
         } catch (ex: Exception) {
