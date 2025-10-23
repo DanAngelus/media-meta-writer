@@ -4,10 +4,12 @@ import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
-import uk.danangelus.media.meta.manager.MediaManager
+import uk.danangelus.media.meta.manager.FilmManager
+import uk.danangelus.media.meta.manager.SeriesManager
 import uk.danangelus.media.meta.model.MediaCfg
 import uk.danangelus.media.meta.model.MediaCfg.Media
 import uk.danangelus.media.meta.model.MediaMetadata
+import uk.danangelus.media.meta.model.MediaType
 import uk.danangelus.media.meta.reader.MediaReader
 import java.io.File
 import java.nio.file.*
@@ -15,6 +17,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.io.path.extension
 import kotlin.io.path.isDirectory
+import kotlin.io.path.isRegularFile
 
 /**
  * Monitors a given directory for new files.
@@ -23,7 +26,8 @@ import kotlin.io.path.isDirectory
  */
 @Service
 class DirectoryMonitor(
-    private val mediaManager: MediaManager,
+    private val seriesManager: SeriesManager,
+    private val filmManager: FilmManager,
     private val mediaCfg: MediaCfg,
     private val mediaReader: MediaReader,
     cfg: MediaCfg,
@@ -40,7 +44,7 @@ class DirectoryMonitor(
             dirToMedia[File(media.sourceDirectory).absolutePath] = media
         }
 
-        fixNfoFiles("\\\\ZionMedia\\media\\Library\\Films")
+//        fixNfoFiles("\\\\ZionMedia\\media\\Library\\Films")
 //        createNfoFiles("C:\\Developer\\Projects\\DanAngelus.UK\\media-meta-writer\\films")
     }
 
@@ -57,10 +61,10 @@ class DirectoryMonitor(
                 return@forEach
             }
 
-            mediaManager.populateMetadata(media, metadata)
+            filmManager.populateMetadata(media, metadata)
 
             if (root.mkdirs()) {
-                mediaManager.createNfo(media, metadata, File(root, "nothing"))
+                filmManager.createNfo(media, metadata, File(root, "nothing"))
             } else {
                 log.warn("WARNING ****************************************** Failed to create directory: {}", root.absolutePath)
             }
@@ -114,7 +118,7 @@ class DirectoryMonitor(
     /**
      * Monitors directories from the configuration and processes new files.
      */
-//    @Scheduled(initialDelay = 3000, fixedDelay = Long.MAX_VALUE)
+    @Scheduled(initialDelay = 3000, fixedDelay = Long.MAX_VALUE)
     fun monitor() {
         // Ensure configuration is valid
         if (mediaCfg.media.isEmpty()) {
@@ -172,37 +176,51 @@ class DirectoryMonitor(
      * Processes all files in the given directory when a new file is detected.
      */
     private fun processAllFilesInDirectory(media: Media, directory: File) {
-        if (processing.get()) {
-            return
-        }
-        processing.set(true)
+
         if (directory.exists() && directory.isDirectory) {
             log.debug("Processing all files in directory: ${directory.absolutePath}")
 
-            val allFiles = directory.listFiles()
-                ?.filter { file -> file.isFile && SUPPORTED_VIDEO_FORMATS.contains(file.extension) }
+            if (false && media.type == MediaType.FILM) {
+                if (processing.get()) {
+                    return
+                }
+                processing.set(true)
 
-            if (allFiles.isNullOrEmpty()) {
-                return
-            }
+                val allFiles = directory.listFiles()
+                    ?.filter { file -> file.isFile && SUPPORTED_VIDEO_FORMATS.contains(file.extension) }
 
-            val files = if (allFiles.size < MAX_THRESHOLD) {
-                allFiles
-            } else {
-                allFiles.subList(0, MAX_THRESHOLD - 1)
-            }
-
-            // Process one batch at a time
-            files.parallelStream()
-                .forEach { file ->
-                    log.debug("Processing file: ${file.absolutePath}")
-                    mediaManager.registerMedia(media, file)
+                if (allFiles.isNullOrEmpty()) {
+                    return
                 }
 
-            log.info("Finished batch: {} from: {}", files.size, directory.absolutePath)
-            // Keep checking for new files
-            processing.set(false)
-            processAllFilesInDirectory(media, directory)
+                val files = if (allFiles.size < MAX_THRESHOLD) {
+                    allFiles
+                } else {
+                    allFiles.subList(0, MAX_THRESHOLD - 1)
+                }
+
+                // Process one batch at a time
+                files.parallelStream()
+                    .forEach { file ->
+                        log.debug("Processing file: ${file.absolutePath}")
+                        if (media.type == MediaType.FILM) {
+                            filmManager.register(media, file)
+                        }
+                    }
+
+                log.info("Finished batch: {} from: {}", files.size, directory.absolutePath)
+                // Keep checking for new files
+                processing.set(false)
+                processAllFilesInDirectory(media, directory)
+
+            } else if (media.type == MediaType.SERIES) {
+                Files.list(directory.toPath())
+                    .filter { it.isDirectory() }
+                    .forEach {
+                        log.debug("Processing file: ${it.toFile().absolutePath}")
+                        seriesManager.register(media, it.toFile())
+                    }
+            }
         } else {
             log.warn("Path is not a valid directory: ${directory.absolutePath}")
         }

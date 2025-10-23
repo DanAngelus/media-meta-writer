@@ -2,7 +2,6 @@ package uk.danangelus.media.meta.services
 
 import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpMethod
 import org.springframework.http.RequestEntity
 import org.springframework.stereotype.Service
@@ -21,6 +20,8 @@ import uk.danangelus.media.meta.services.model.MovieDetailsResponse
 import uk.danangelus.media.meta.services.model.MovieKeywordsResponse
 import uk.danangelus.media.meta.services.model.MovieReleaseDatesResponse
 import uk.danangelus.media.meta.services.model.MovieSearchResponse
+import uk.danangelus.media.meta.services.model.Series
+import uk.danangelus.media.meta.services.model.TVSearchResponse
 
 /**
  * Searches IMDB for movie details to apply to metadata.
@@ -240,6 +241,93 @@ class TMDBService(
         } catch (ex: Exception) {
             log.error("Error while fetching image from TMDb", ex)
             null
+        }
+    }
+
+    fun findSeries(title: String, year: String): Series? {
+
+        var uri = UriComponentsBuilder
+            .fromUriString("${tmdbServiceCfg.baseUrl}${tmdbServiceCfg.api["tv-search"]}")
+            .queryParam("api_key", tmdbServiceCfg.access.key)
+            .queryParam("query", title)
+            .queryParam("year", year)
+            .build(null)
+
+        log.info("[{} ({})] Searching TMDb for title", title, year)
+
+        try {
+            var request = RequestEntity<Void>(
+                LinkedMultiValueMap(mapOf("Authorization" to listOf("Bearer ${tmdbServiceCfg.access.token}"))),
+                HttpMethod.GET,
+                uri,
+            )
+            val response = restTemplate.exchange<TVSearchResponse>(request).body
+
+            var tvData = response?.results
+                ?.firstOrNull {
+                    it.name?.equals(title, true) == true
+                            && it.firstAirDate?.contains(year) == true
+                }
+
+            if (tvData == null) {
+                // Fallback to simply the first result with a matching name
+                tvData = response?.results?.firstOrNull {
+                    it.name?.equals(title, true) == true
+                }
+            }
+
+            if (tvData == null) {
+                // Fallback to simply the first result
+                tvData = response?.results?.firstOrNull()
+            }
+
+            if (tvData != null) {
+                uri = UriComponentsBuilder
+                    .fromUriString("${tmdbServiceCfg.baseUrl}${tmdbServiceCfg.api["tv-details"]}")
+                    .queryParam("api_key", tmdbServiceCfg.access.key)
+                    .build(mapOf("tv_id" to tvData.id))
+                request = RequestEntity<Void>(
+                    LinkedMultiValueMap(mapOf("Authorization" to listOf("Bearer ${tmdbServiceCfg.access.token}"))),
+                    HttpMethod.GET,
+                    uri,
+                )
+                return restTemplate.exchange<Series?>(request)?.body
+            } else {
+                log.warn("[{} ({})] No results found on TMDb for title", title, year)
+                throw NoMatchException("No results found on TMDb for title: ${title}")
+            }
+        } catch (ex: NoMatchException) {
+            throw ex
+        } catch (ex: Exception) {
+            log.error("Error while fetching metadata from TMDb for title: ${title}", ex)
+            throw ex
+        }
+    }
+
+    fun getSeason(seriesId: String, seriesName: String, seasonNumber: String): Series.Season? {
+        val uri = UriComponentsBuilder
+            .fromUriString("${tmdbServiceCfg.baseUrl}${tmdbServiceCfg.api["tv-season"]}")
+            .queryParam("api_key", tmdbServiceCfg.access.key)
+            .build(mapOf(
+                "tv_id" to seriesId,
+                "season_number" to seasonNumber
+            ))
+
+        log.info("[{} ({})] Searching TMDb for season {} of {}", seasonNumber, seriesName)
+
+        try {
+            val request = RequestEntity<Void>(
+                LinkedMultiValueMap(mapOf("Authorization" to listOf("Bearer ${tmdbServiceCfg.access.token}"))),
+                HttpMethod.GET,
+                uri,
+            )
+            return restTemplate.exchange<Series.Season>(request).body
+
+        } catch (ex: NoMatchException) {
+            throw ex
+        } catch (ex: Exception) {
+            log.error("Error while fetching metadata from TMDb for: ${seriesName} -> Season ${seasonNumber}", ex)
+            throw ex
         }
     }
 

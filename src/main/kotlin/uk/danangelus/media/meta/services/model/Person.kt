@@ -12,6 +12,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 class Person(
     @field:JsonProperty("name") val name: String? = null,
     @field:JsonProperty("character") val character: String? = null,
+    @field:JsonProperty("department") val department: String? = null,
     @field:JsonProperty("role") val role: String? = null,
     @field:JsonProperty("job") val job: String? = null,
     @field:JsonProperty("order") val order: Int? = null,

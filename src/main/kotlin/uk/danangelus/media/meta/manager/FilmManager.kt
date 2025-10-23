@@ -21,7 +21,7 @@ import java.nio.file.Paths
  * @author Dan Bennett
  */
 @Service
-class MediaManager(
+class FilmManager(
     private val mediaReader: MediaReader,
     private val mediaOrganiser: FileOrganiser,
     private val metaWriter: MetaWriter,
@@ -30,7 +30,7 @@ class MediaManager(
     @Value("\${media.enable.find-artwork}") private val findArtworkEnabled: Boolean,
 ) {
 
-    fun registerMedia(media: Media, file: File) {
+    fun register(media: Media, file: File) {
         try {
             val metadata = mediaReader.readFile(media, file)
             if (metadata?.title == null) {
@@ -108,6 +108,6 @@ class MediaManager(
     }
 
     companion object {
-        private val log = LoggerFactory.getLogger(MediaManager::class.java)
+        private val log = LoggerFactory.getLogger(FilmManager::class.java)
     }
 }
