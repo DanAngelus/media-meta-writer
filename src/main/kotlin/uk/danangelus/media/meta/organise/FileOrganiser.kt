@@ -73,6 +73,12 @@ class FileOrganiser(
         }
     }
 
+    fun renameEpisode(name: String, episodeFile: File) {
+        if (movingFilesEnabled) {
+            Files.move(episodeFile.toPath(), File(episodeFile.parentFile, "${name}.${episodeFile.extension}").toPath())
+        }
+    }
+
     companion object {
         private val log = LoggerFactory.getLogger(FileOrganiser::class.java)
     }

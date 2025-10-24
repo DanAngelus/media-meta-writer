@@ -221,20 +221,14 @@ class MetaWriter(
         }
     }
 
-    fun writeSeasonDataToNfo(
-        seasonDir: File,
-        series: Series,
-        season: Series.Season,
-    ) {
-    }
-
     fun writeEpisodeDataToNfo(
         seasonDir: File,
         series: Series,
         season: Series.Season,
         episode: Series.Episode,
+        episodeName: String,
     ) {
-        val nfoFile = File(seasonDir, "tvshow.nfo")
+        val nfoFile = File(seasonDir, "${episodeName}.nfo")
         try {
             if (nfoFile.exists()) {
                 log.warn("[{}] NFO file already exists for file: ${seasonDir.name}. Skipping writing.", series)
@@ -245,7 +239,12 @@ class MetaWriter(
                 writer.println("<episodedetails>")
                 writer.println("  <createdby>MediaMetaWriter by DanAngelus</createdby>")
                 season.seasonNumber?.let { writer.println("  <season>$it</season>") }
-                episode.episodeNumber?.let { writer.println("  <episode>$it</episode>") }
+                episode.episodeNumber?.let {
+                    writer.println("  <episode>$it</episode>")
+                    writer.println("  <displayorder>$it</displayorder>")
+                }
+                episode.airDate?.let { writer.println("  <premiered>${it}</premiered>") }
+                episode.runtime?.let { writer.println("  <runtime>$it</runtime>") }
                 episode.name?.let { writer.println("  <title>$it</title>") }
                 episode.overview?.let { writer.println("  <plot>$it</plot>") }
                 episode.voteAverage?.let { writer.println("  <userrating>${it}</userrating>") }
@@ -256,8 +255,7 @@ class MetaWriter(
                 if (series.poster != null ||
                     series.backdrop != null) {
                     writer.println("  <art>")
-                    if (series.backdrop != null) writer.println("    <backdrop>backdrop.jpg</backdrop>")
-                    if (series.poster != null) writer.println("    <poster>poster.jpg</poster>")
+                    if (episode.still != null) writer.println("    <thumb>$episodeName.jpg</thumb>")
                     writer.println("  </art>")
                 }
 //                    series.keywords?.forEach { writer.println("  <tag>$it</tag>") }

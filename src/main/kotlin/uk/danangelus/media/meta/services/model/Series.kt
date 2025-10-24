@@ -91,9 +91,22 @@ class Series(
         @field:JsonProperty("show_id") val showId: Int? = null,
         @field:JsonProperty("still_path") val stillPath: String? = null,
         @Transient var still: ByteArray? = null,
+        @Transient var file: File? = null,
     ) {
+        fun filename(seriesName: String): String {
+            return "$seriesName - ${episodeNumber()} - ${name
+                ?.replace("&", "and")
+                ?.replace(": ", " - ")
+                ?.replace(Regex("[^\\p{L}\\p{N}.\\- ]"), "")
+                ?.trim()}"
+        }
+
+        fun episodeNumber(): String {
+            return "s${seasonNumber.toString().padStart(2, '0')}e${episodeNumber.toString().padStart(2, '0')}"
+        }
+
         override fun toString(): String {
-            return "s${seasonNumber}e$episodeNumber - $name"
+            return "${episodeNumber()} - $name"
         }
     }
 

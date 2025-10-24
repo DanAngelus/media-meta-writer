@@ -1,6 +1,5 @@
 package uk.danangelus.media.meta.manager
 
-import org.apache.poi.hssf.usermodel.HeaderFooter.file
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
@@ -37,23 +36,28 @@ class SeriesManager(
             series.directory = seriesDir
 
             log.info("[{}] Retrieving series information from TMDB", series)
-            Files.list(seriesDir.toPath()).forEach { seasonDir ->
-                val seasonNumber = seasonDir.fileName.toString().substringAfter("Season ").trim()
-                val season = getSeasonMetadata(series, seasonNumber)
-                season.directory = seasonDir.toFile()
-                season.episodes = season.episodes?.toMutableList()
-                Files.list(seasonDir).forEach {
-                    try {
-                        val file = it.toFile()
+            Files.list(seriesDir.toPath())
+                .filter { it.toFile().isDirectory && it.fileName.toString().startsWith("Season ") }
+                .forEach { seasonDir ->
+                    val seasonNumber = seasonDir.fileName.toString().substringAfter("Season ").trim()
+                    val season = getSeasonMetadata(series, seasonNumber)
+                    season.directory = seasonDir.toFile()
+                    season.episodes = season.episodes?.toMutableList()
+                    Files.list(seasonDir)
+                        .filter { file -> file.toFile().isFile && SUPPORTED_VIDEO_FORMATS.contains(file.toFile().extension) }
+                        .forEach {
+                            try {
+                                val file = it.toFile()
 
-                        val (episodeNumber, title) = retrieveFileData(seasonDir.fileName.toString(), file)
-                        getEpisodeMetadata(series, season, episodeNumber, title)
-                        log.info("[{}] Retrieving updated information from TMDB", series ?: "Unknown")
-                    } catch (ex: Exception) {
-                        log.error("[{}] Failed to process file: {}", series, it.toFile().absolutePath, ex)
-                    }
+                                val (episodeNumber, title) = retrieveFileData(seasonDir.fileName.toString(), file)
+                                val episode = getEpisodeMetadata(series, season, episodeNumber, title)
+                                episode.file = file
+                                log.info("[{}] Retrieving updated information from TMDB", series ?: "Unknown")
+                            } catch (ex: Exception) {
+                                log.error("[{}] Failed to process file: {}", series, it.toFile().absolutePath, ex)
+                            }
+                        }
                 }
-            }
             processMedia(series)
         } catch (ex: Exception) {
             log.error("Error while processing file: ${seriesDir.absolutePath}", ex)
@@ -122,11 +126,25 @@ class SeriesManager(
             if (createNfoEnabled) metaWriter.writeSeriesDataToNfo(series.directory!!, series)
             findArtwork(series, series.directory!!)
             series.seasons?.forEach { season ->
-                if (createNfoEnabled) metaWriter.writeSeasonDataToNfo(season.directory!!, series, season)
+//                if (createNfoEnabled) metaWriter.writeSeasonDataToNfo(season.directory!!, series, season)
+                if (season.directory == null) {
+                    season.directory = File(series.directory, season.name!!)
+                    season.directory?.mkdirs()
+                }
                 findArtwork(season, season.directory!!)
                 season.episodes?.forEach { episode ->
-                    if (createNfoEnabled) metaWriter.writeEpisodeDataToNfo(season.directory!!, series, season, episode)
-                    findArtwork(episode, season.directory!!)
+                    val name = episode.filename(series.name!!)
+                    if (episode.file == null) {
+                        log.warn("[{}] File not found for episode: {}", series, episode)
+                        return@forEach
+                    }
+                    if (episode.file!!.nameWithoutExtension.equals(name).not()) {
+                        mediaOrganiser.renameEpisode(name, episode.file!!)
+                    }
+
+                    if (createNfoEnabled) metaWriter.writeEpisodeDataToNfo(season.directory!!, series, season, episode, name)
+                    findArtwork(episode, name, season.directory!!)
+
                 }
             }
 
@@ -167,11 +185,11 @@ class SeriesManager(
         }
     }
 
-    fun findArtwork(episode: Series.Episode, artworkLocation: File) {
+    fun findArtwork(episode: Series.Episode, episodeName: String, artworkLocation: File) {
         if (findArtworkEnabled && episode.still != null) {
             log.info("[{}] Writing additional images to: {}", episode, artworkLocation.absolutePath)
 
-            val stillPath = File(artworkLocation, "still.jpg").absolutePath
+            val stillPath = File(artworkLocation, "$episodeName.jpg").absolutePath
             Files.write(Paths.get(stillPath), episode.still!!)
             log.info("[{}] Wrote poster to: {}", episode, stillPath)
         }
@@ -179,6 +197,7 @@ class SeriesManager(
 
     companion object {
         private val EPISODE_REGEX = """^(.+?)\s*-\s*s(\d{2})e(\d{2})\s*-\s*(.+)?$""".toRegex(RegexOption.IGNORE_CASE)
+        private val SUPPORTED_VIDEO_FORMATS = listOf("mp4", "m4v", "mkv", "mov", "avi", "wmv", "mpeg", "mpg")
 
         private val log = LoggerFactory.getLogger(SeriesManager::class.java)
     }
