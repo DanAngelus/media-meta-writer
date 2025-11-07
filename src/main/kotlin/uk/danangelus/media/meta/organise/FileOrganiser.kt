@@ -3,9 +3,11 @@ package uk.danangelus.media.meta.organise
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import uk.danangelus.media.meta.manager.SeriesManager
 import uk.danangelus.media.meta.model.MediaCfg
 import uk.danangelus.media.meta.model.MediaMetadata
 import uk.danangelus.media.meta.model.MediaType.FILM
+import uk.danangelus.media.meta.services.model.Series
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
@@ -73,9 +75,30 @@ class FileOrganiser(
         }
     }
 
-    fun renameEpisode(name: String, episodeFile: File) {
+    fun renameEpisode(name: String, episodeFile: File, seasonDir: File) {
         if (movingFilesEnabled) {
-            Files.move(episodeFile.toPath(), File(episodeFile.parentFile, "${name}.${episodeFile.extension}").toPath())
+            val tempFile = File(seasonDir, "${name}.rename.${episodeFile.extension}")
+            Files.move(episodeFile.toPath(), tempFile.toPath())
+            Files.move(tempFile.toPath(), File(episodeFile.parentFile, "${name}.${episodeFile.extension}").toPath())
+        }
+    }
+
+    fun renameSeries(series: Series) {
+        try {
+        if (movingFilesEnabled) {
+            if (series.directory == null) {
+                series.directory = File(series.filename())
+                series.directory?.mkdirs()
+            } else if (series.directory!!.nameWithoutExtension.equals(series.filename(), true).not()) {
+                val newDir = File(series.directory!!.parentFile, series.filename())
+                Files.move(series.directory!!.toPath(), newDir.toPath())
+
+                log.error("Renamed series directory to: {}", series.directory!!.absolutePath)
+                series.directory = newDir
+            }
+        }
+        } catch (ex: Exception) {
+            log.error("Error while renaming series directory: ${series.directory?.absolutePath}", ex)
         }
     }
 

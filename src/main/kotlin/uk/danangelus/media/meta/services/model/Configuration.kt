@@ -11,7 +11,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
-class ConfigurationResponse(
+class Configuration(
     @field:JsonProperty("images") val images: Image? = null,
     @field:JsonProperty("change_keys") val changeKeys: List<String> = emptyList(),
 ) {

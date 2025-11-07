@@ -3,6 +3,7 @@ package uk.danangelus.media.meta.services.model
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
+import uk.danangelus.media.meta.model.NamingUtils.clean
 import java.io.File
 
 /**
@@ -47,8 +48,11 @@ class Series(
     @Transient var poster: ByteArray? = null,
     @Transient var backdrop: ByteArray? = null,
 ) {
+    fun filename(): String {
+        return "${clean(name ?: originalName)}${if (year.isNullOrBlank()) "" else " ($year)"}"
+    }
 
-    val year: String? = firstAirDate?.substring(0, 4)
+    val year: String? = if (firstAirDate.isNullOrBlank()) "" else firstAirDate?.substring(0, 4)
 
     override fun toString(): String {
         return "${name ?: originalName ?: "Unknown"} (${year ?: "Unknown"})"
@@ -69,6 +73,10 @@ class Series(
         @Transient var directory: File? = null,
         @Transient var poster: ByteArray? = null,
     ) {
+        fun filename(): String {
+            return "Season $seasonNumber"
+        }
+
         override fun toString(): String {
             return name ?: "Season $seasonNumber"
         }
@@ -83,7 +91,7 @@ class Series(
         @field:JsonProperty("vote_average") val voteAverage: Double? = null,
         @field:JsonProperty("vote_count") val voteCount: Int? = null,
         @field:JsonProperty("air_date") val airDate: String? = null,
-        @field:JsonProperty("episode_number") val episodeNumber: String? = null,
+        @field:JsonProperty("episode_number") var episodeNumber: String? = null,
         @field:JsonProperty("episode_type") val episodeType: String? = null,
         @field:JsonProperty("production_code") val productionCode: String? = null,
         @field:JsonProperty("runtime") val runtime: Int? = null,
@@ -94,11 +102,7 @@ class Series(
         @Transient var file: File? = null,
     ) {
         fun filename(seriesName: String): String {
-            return "$seriesName - ${episodeNumber()} - ${name
-                ?.replace("&", "and")
-                ?.replace(": ", " - ")
-                ?.replace(Regex("[^\\p{L}\\p{N}.\\- ]"), "")
-                ?.trim()}"
+            return "$seriesName - ${episodeNumber()}${if (name.isNullOrBlank()) "" else " - ${clean(name)}"}"
         }
 
         fun episodeNumber(): String {
@@ -112,8 +116,8 @@ class Series(
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonIgnoreProperties(ignoreUnknown = true)
-    class Genre(
-        @field:JsonProperty("id") val id: Int? = null,
+    class Country(
+        @field:JsonProperty("iso_3166_1") val iso3166: String? = null,
         @field:JsonProperty("name") val name: String? = null,
     ) {
         override fun toString(): String {
@@ -138,10 +142,21 @@ class Series(
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonIgnoreProperties(ignoreUnknown = true)
-    class ProductionCompany(
+    class Genre(
         @field:JsonProperty("id") val id: Int? = null,
         @field:JsonProperty("name") val name: String? = null,
-        @field:JsonProperty("logo_path") val logoPath: String? = null,
+    ) {
+        override fun toString(): String {
+            return name ?: "Unknown"
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    class Language(
+        @field:JsonProperty("english_name") val englishName: String? = null,
+        @field:JsonProperty("iso_639_1") val iso639: String? = null,
+        @field:JsonProperty("name") val name: String? = null,
     ) {
         override fun toString(): String {
             return name ?: "Unknown"
@@ -163,21 +178,10 @@ class Series(
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonIgnoreProperties(ignoreUnknown = true)
-    class Country(
-        @field:JsonProperty("iso_3166_1") val iso3166: String? = null,
+    class ProductionCompany(
+        @field:JsonProperty("id") val id: Int? = null,
         @field:JsonProperty("name") val name: String? = null,
-    ) {
-        override fun toString(): String {
-            return name ?: "Unknown"
-        }
-    }
-
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    class Language(
-        @field:JsonProperty("english_name") val englishName: String? = null,
-        @field:JsonProperty("iso_639_1") val iso639: String? = null,
-        @field:JsonProperty("name") val name: String? = null,
+        @field:JsonProperty("logo_path") val logoPath: String? = null,
     ) {
         override fun toString(): String {
             return name ?: "Unknown"

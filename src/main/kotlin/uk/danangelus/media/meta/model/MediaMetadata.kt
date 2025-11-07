@@ -1,5 +1,7 @@
 package uk.danangelus.media.meta.model
 
+import uk.danangelus.media.meta.model.NamingUtils.clean
+
 /**
  * Represents the metadata for a movie or film.
  *
@@ -34,11 +36,7 @@ open class MediaMetadata(
     var tvdbId: String? = null,
 ) {
 
-    fun filename(): String = "${title
-        ?.replace("&", "and")
-        ?.replace(": ", " - ")
-        ?.replace(Regex("[^\\p{L}\\p{N}.\\- ]"), "")
-        ?.trim()} ($year)"
+    fun filename(): String = "${clean(title)} ($year)"
 
     fun filmTitle(): String = "$title ($year)"
 

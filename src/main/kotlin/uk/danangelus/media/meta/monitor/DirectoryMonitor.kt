@@ -180,7 +180,7 @@ class DirectoryMonitor(
         if (directory.exists() && directory.isDirectory) {
             log.debug("Processing all files in directory: ${directory.absolutePath}")
 
-            if (false && media.type == MediaType.FILM) {
+            if (media.type == MediaType.FILM) {
                 if (processing.get()) {
                     return
                 }

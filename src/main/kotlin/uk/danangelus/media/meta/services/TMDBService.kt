@@ -13,15 +13,15 @@ import uk.danangelus.media.meta.error.NoMatchException
 import uk.danangelus.media.meta.model.Actor
 import uk.danangelus.media.meta.model.MediaMetadata
 import uk.danangelus.media.meta.model.TMDBServiceCfg
-import uk.danangelus.media.meta.services.model.CastListResponse
-import uk.danangelus.media.meta.services.model.ConfigurationResponse
-import uk.danangelus.media.meta.services.model.GenreListResponse
-import uk.danangelus.media.meta.services.model.MovieDetailsResponse
-import uk.danangelus.media.meta.services.model.MovieKeywordsResponse
-import uk.danangelus.media.meta.services.model.MovieReleaseDatesResponse
-import uk.danangelus.media.meta.services.model.MovieSearchResponse
+import uk.danangelus.media.meta.services.model.CastList
+import uk.danangelus.media.meta.services.model.Configuration
+import uk.danangelus.media.meta.services.model.Film
+import uk.danangelus.media.meta.services.model.GenreList
+import uk.danangelus.media.meta.services.model.FilmKeywords
+import uk.danangelus.media.meta.services.model.FilmReleaseDates
+import uk.danangelus.media.meta.services.model.FilmSearchResults
 import uk.danangelus.media.meta.services.model.Series
-import uk.danangelus.media.meta.services.model.TVSearchResponse
+import uk.danangelus.media.meta.services.model.SeriesSearchResults
 
 /**
  * Searches IMDB for movie details to apply to metadata.
@@ -34,7 +34,7 @@ class TMDBService(
     private val tmdbServiceCfg: TMDBServiceCfg,
 ) {
 
-    private var configuration: ConfigurationResponse? = null
+    private var configuration: Configuration? = null
     private var filmGenres: MutableMap<Int, String> = mutableMapOf()
     private var seriesGenres: MutableMap<Int, String> = mutableMapOf()
 
@@ -51,7 +51,7 @@ class TMDBService(
             HttpMethod.GET,
             UriComponentsBuilder.fromUriString("${tmdbServiceCfg.baseUrl}${tmdbServiceCfg.api["configuration"]}").build(null),
         )
-        configuration = restTemplate.exchange<ConfigurationResponse>(request).body
+        configuration = restTemplate.exchange<Configuration>(request).body
     }
 
     private fun loadGenres() {
@@ -60,13 +60,13 @@ class TMDBService(
         getGenres("tv-genres")?.forEach { seriesGenres[it.id!!] = it.name!! }
     }
 
-    fun getGenres(apiUri: String): List<MovieDetailsResponse.Genre>? {
+    fun getGenres(apiUri: String): List<Film.Genre>? {
         val request = RequestEntity<Void>(
             LinkedMultiValueMap(mapOf("Authorization" to listOf("Bearer ${tmdbServiceCfg.access.token}"))),
             HttpMethod.GET,
             UriComponentsBuilder.fromUriString("${tmdbServiceCfg.baseUrl}${tmdbServiceCfg.api[apiUri]}").build(null),
         )
-        return restTemplate.exchange<GenreListResponse>(request).body?.genres
+        return restTemplate.exchange<GenreList>(request).body?.genres
     }
 
     fun populateMovieDetails(metadata: MediaMetadata) {
@@ -77,7 +77,7 @@ class TMDBService(
         val credits = getCast(movieData.id.toString())
 
         metadata.tmdbId = movieData.id?.toString()
-        metadata.imdbId = fullDetails?.imdbid
+        metadata.imdbId = fullDetails?.imdbId
         metadata.title = movieData.title
         metadata.originalTitle = movieData.originalTitle
         metadata.rating = movieData.voteAverage?.toString()
@@ -118,7 +118,7 @@ class TMDBService(
 
     }
 
-    private fun retrieveReleaseDate(movieData: MovieDetailsResponse): MovieReleaseDatesResponse.ReleaseDate? {
+    private fun retrieveReleaseDate(movieData: Film): Film.ReleaseDate? {
         val uri = UriComponentsBuilder
             .fromUriString("${tmdbServiceCfg.baseUrl}${tmdbServiceCfg.api["movie-release-dates"]}")
             .queryParam("api_key", tmdbServiceCfg.access.key)
@@ -128,11 +128,11 @@ class TMDBService(
             HttpMethod.GET,
             uri,
         )
-        val response = restTemplate.exchange<MovieReleaseDatesResponse>(request).body
+        val response = restTemplate.exchange<FilmReleaseDates>(request).body
         return response?.results?.firstOrNull { it.iso.equals("GB", true) }?.releaseDates?.firstOrNull()
     }
 
-    private fun retrieveMovieDetails(movieData: MovieDetailsResponse): MovieDetailsResponse? {
+    private fun retrieveMovieDetails(movieData: Film): Film? {
         val uri = UriComponentsBuilder
             .fromUriString("${tmdbServiceCfg.baseUrl}${tmdbServiceCfg.api["movie-details"]}")
             .queryParam("api_key", tmdbServiceCfg.access.key)
@@ -142,10 +142,10 @@ class TMDBService(
             HttpMethod.GET,
             uri,
         )
-       return restTemplate.exchange<MovieDetailsResponse>(request).body
+       return restTemplate.exchange<Film>(request).body
     }
 
-    private fun retrieveMovieKeywords(movieData: MovieDetailsResponse): MovieKeywordsResponse? {
+    private fun retrieveMovieKeywords(movieData: Film): FilmKeywords? {
         val uri = UriComponentsBuilder
             .fromUriString("${tmdbServiceCfg.baseUrl}${tmdbServiceCfg.api["movie-keywords"]}")
             .queryParam("api_key", tmdbServiceCfg.access.key)
@@ -155,10 +155,10 @@ class TMDBService(
             HttpMethod.GET,
             uri,
         )
-       return restTemplate.exchange<MovieKeywordsResponse>(request).body
+       return restTemplate.exchange<FilmKeywords>(request).body
     }
 
-    fun findMovie(title: String, year: String): MovieDetailsResponse {
+    fun findMovie(title: String, year: String): Film {
         val uri = UriComponentsBuilder
             .fromUriString("${tmdbServiceCfg.baseUrl}${tmdbServiceCfg.api["movie-search"]}")
             .queryParam("api_key", tmdbServiceCfg.access.key)
@@ -174,7 +174,7 @@ class TMDBService(
                 HttpMethod.GET,
                 uri,
             )
-            val response = restTemplate.exchange<MovieSearchResponse>(request).body
+            val response = restTemplate.exchange<FilmSearchResults>(request).body
 
             var movieData = response?.results
                 ?.firstOrNull {
@@ -201,7 +201,7 @@ class TMDBService(
         }
     }
 
-    private fun getCast(movieId: String): CastListResponse? {
+    private fun getCast(movieId: String): CastList? {
         return try {
 
             val castRequest = RequestEntity<Void>(
@@ -215,7 +215,7 @@ class TMDBService(
                     .fromUriString("${tmdbServiceCfg.baseUrl}${tmdbServiceCfg.api["movie-credits"]}")
                     .build(mapOf("movie_id" to movieId)),
             )
-            restTemplate.exchange<CastListResponse>(castRequest).body
+            restTemplate.exchange<CastList>(castRequest).body
         } catch (ex: Exception) {
             log.error("Error while fetching cast from TMDb", ex)
             null
@@ -261,7 +261,7 @@ class TMDBService(
                 HttpMethod.GET,
                 uri,
             )
-            val response = restTemplate.exchange<TVSearchResponse>(request).body
+            val response = restTemplate.exchange<SeriesSearchResults>(request).body
 
             var tvData = response?.results
                 ?.firstOrNull {

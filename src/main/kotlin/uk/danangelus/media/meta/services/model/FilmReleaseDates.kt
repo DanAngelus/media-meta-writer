@@ -10,6 +10,6 @@ import com.fasterxml.jackson.annotation.JsonInclude
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
-class MovieKeywordsResponse(
-    val keywords: List<MovieDetailsResponse.Keyword>? = null
+class FilmReleaseDates(
+    val results: List<Film.ISODate>? = null
 )

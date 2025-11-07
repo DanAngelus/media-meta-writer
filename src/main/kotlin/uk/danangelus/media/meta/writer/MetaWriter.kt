@@ -255,7 +255,7 @@ class MetaWriter(
                 if (series.poster != null ||
                     series.backdrop != null) {
                     writer.println("  <art>")
-                    if (episode.still != null) writer.println("    <thumb>$episodeName.jpg</thumb>")
+                    if (episode.still != null) writer.println("    <thumb>$episodeName-thumb.jpg</thumb>")
                     writer.println("  </art>")
                 }
 //                    series.keywords?.forEach { writer.println("  <tag>$it</tag>") }

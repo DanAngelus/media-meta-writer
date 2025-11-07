@@ -21,8 +21,8 @@ media:
     - type: SERIES
       error-directory: C:/Users/me/Media/_error
       nomatch-directory: C:/Users/me/Media/_nomatch
-      source-directory: \\ZionMedia\media2\Library\Series
-      destination-directory: \\ZionMedia\media2\Library\Series
+      source-directory: \\ZionMedia\media2\Library\_drop
+      destination-directory: \\ZionMedia\media2\Library\_drop
 
 tmdb:
   base-url: https://api.themoviedb.org

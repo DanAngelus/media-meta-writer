@@ -11,7 +11,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
-class CastListResponse(
+class CastList(
     @field:JsonProperty("cast") val cast: List<Person>? = null,
     @field:JsonProperty("crew") val crew: List<Person>? = null,
 )

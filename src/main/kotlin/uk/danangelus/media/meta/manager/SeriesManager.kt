@@ -87,10 +87,16 @@ class SeriesManager(
     }
 
     fun getEpisodeMetadata(series: Series, season: Series.Season, episodeNumber: String, title: String): Series.Episode {
-        val episode = season.episodes?.firstOrNull { it.episodeNumber.equals(episodeNumber, true) }
+        // Match on title first
+        var episode = season.episodes?.firstOrNull { it.name.equals(title, true) }
+        if (episode == null) {
+            episode = season.episodes?.firstOrNull { it.episodeNumber.equals(episodeNumber, true) }
+        } else if (episode.episodeNumber.equals(episodeNumber, true).not()) {
+            episode.episodeNumber = episodeNumber
+        }
 
         log.info("[{} - {}] Found matching episode: {}", series, season, episode)
-        return episode ?: throw NoMatchException("No matching season found for: $episodeNumber")
+        return episode ?: throw NoMatchException("No matching episode found for: s${season.seasonNumber}e$episodeNumber")
     }
 
     fun getTitle(fileName: String): String? {
@@ -109,11 +115,11 @@ class SeriesManager(
     fun retrieveFileData(seriesDirName: String, file: File): Pair<String, String> {
         //ToDo :: Write more sophisticated logic to retrieve naming
         val fileName = file.nameWithoutExtension.trim()
-        val matchResult = EPISODE_REGEX.matchEntire(fileName)
+        val matchResult = FULL_NAME_EPISODE_REGEX.matchEntire(fileName)
 
         if (matchResult != null) {
 
-        val (_, _, episodeStr, episodeName) = matchResult.destructured
+        val (_, _, _, episodeStr, _, episodeName) = matchResult.destructured
             return Pair(episodeStr.trim().toInt().toString(), episodeName.trim())
         }
         return Pair(fileName, "")
@@ -122,25 +128,26 @@ class SeriesManager(
     fun processMedia(series: Series) {
         try {
 
+            mediaOrganiser.renameSeries(series)
+
             log.info("[{}] Writing updated data to", series.directory?.absolutePath)
             if (createNfoEnabled) metaWriter.writeSeriesDataToNfo(series.directory!!, series)
             findArtwork(series, series.directory!!)
             series.seasons?.forEach { season ->
-//                if (createNfoEnabled) metaWriter.writeSeasonDataToNfo(season.directory!!, series, season)
                 if (season.directory == null) {
                     season.directory = File(series.directory, season.name!!)
                     season.directory?.mkdirs()
                 }
                 findArtwork(season, season.directory!!)
                 season.episodes?.forEach { episode ->
-                    val name = episode.filename(series.name!!)
+                    val name = episode.filename(series.filename())
                     if (episode.file == null) {
                         log.warn("[{}] File not found for episode: {}", series, episode)
                         return@forEach
                     }
-                    if (episode.file!!.nameWithoutExtension.equals(name).not()) {
-                        mediaOrganiser.renameEpisode(name, episode.file!!)
-                    }
+//                    if (episode.file!!.nameWithoutExtension.equals(name, false).not()) {
+                    mediaOrganiser.renameEpisode(name, episode.file!!, season.directory!!)
+//                    }
 
                     if (createNfoEnabled) metaWriter.writeEpisodeDataToNfo(season.directory!!, series, season, episode, name)
                     findArtwork(episode, name, season.directory!!)
@@ -189,14 +196,14 @@ class SeriesManager(
         if (findArtworkEnabled && episode.still != null) {
             log.info("[{}] Writing additional images to: {}", episode, artworkLocation.absolutePath)
 
-            val stillPath = File(artworkLocation, "$episodeName.jpg").absolutePath
+            val stillPath = File(artworkLocation, "$episodeName-thumb.jpg").absolutePath
             Files.write(Paths.get(stillPath), episode.still!!)
             log.info("[{}] Wrote poster to: {}", episode, stillPath)
         }
     }
 
     companion object {
-        private val EPISODE_REGEX = """^(.+?)\s*-\s*s(\d{2})e(\d{2})\s*-\s*(.+)?$""".toRegex(RegexOption.IGNORE_CASE)
+        private val FULL_NAME_EPISODE_REGEX = """^(.+?)\s*-\s*[Ss](\d{1,2})(\.|)[Ee]{1}(\d{2})( - | |)(.+)?$""".toRegex(RegexOption.IGNORE_CASE)
         private val SUPPORTED_VIDEO_FORMATS = listOf("mp4", "m4v", "mkv", "mov", "avi", "wmv", "mpeg", "mpg")
 
         private val log = LoggerFactory.getLogger(SeriesManager::class.java)

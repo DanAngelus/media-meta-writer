@@ -10,6 +10,6 @@ import com.fasterxml.jackson.annotation.JsonInclude
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
-class MovieSearchResponse(
-    val results: List<MovieDetailsResponse>? = null
+class FilmSearchResults(
+    val results: List<Film>? = null
 )
