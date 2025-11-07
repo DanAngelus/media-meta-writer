@@ -41,6 +41,8 @@ class SeriesManager(
                 .forEach { seasonDir ->
                     val seasonNumber = seasonDir.fileName.toString().substringAfter("Season ").trim()
                     val season = getSeasonMetadata(series, seasonNumber)
+                    if (season == null) return@forEach
+
                     season.directory = seasonDir.toFile()
                     season.episodes = season.episodes?.toMutableList()
                     Files.list(seasonDir)
@@ -71,13 +73,13 @@ class SeriesManager(
         return metadata
     }
 
-    fun getSeasonMetadata(series: Series, seasonNumber: String): Series.Season {
-        val season = series.seasons?.firstOrNull { it.seasonNumber.equals(seasonNumber, true) }
+    fun getSeasonMetadata(series: Series, seasonNumber: String): Series.Season? {
+        var season = series.seasons?.firstOrNull { it.seasonNumber.equals(seasonNumber, true) }
 
         log.info("[{}] Found matching season: {}", series, season)
         if (season == null) {
             log.info("[{}] No matching season found for: {}", series, seasonNumber)
-            throw NoMatchException("No matching season found for: $seasonNumber")
+            return null
         }
         val fullSeasonDetails = tmdbService.getSeason(series.id.toString(), series.name!!, season.seasonNumber!!)
             ?: throw NoMatchException("No matching season found for: $seasonNumber")
@@ -203,8 +205,8 @@ class SeriesManager(
     }
 
     companion object {
-        private val FULL_NAME_EPISODE_REGEX = """^(.+?)\s*-\s*[Ss](\d{1,2})(\.|)[Ee]{1}(\d{2})( - | |)(.+)?$""".toRegex(RegexOption.IGNORE_CASE)
-        private val SUPPORTED_VIDEO_FORMATS = listOf("mp4", "m4v", "mkv", "mov", "avi", "wmv", "mpeg", "mpg")
+        private val FULL_NAME_EPISODE_REGEX = """^(.+?)\s*-\s*[Ss](\d{1,2})(\.|-|)[Ee]{1}(\d{1,2})( - | |)(.+)?$""".toRegex(RegexOption.IGNORE_CASE)
+        private val SUPPORTED_VIDEO_FORMATS = listOf("divx", "mp4", "m4v", "mkv", "mov", "avi", "wmv", "mpeg", "mpg")
 
         private val log = LoggerFactory.getLogger(SeriesManager::class.java)
     }
